@@ -34,6 +34,7 @@ export function useWatchlistUpdateMutation() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["watchlist"] }),
         queryClient.invalidateQueries({ queryKey: ["home"] }),
+        queryClient.invalidateQueries({ queryKey: ["up-next"] }),
         queryClient.invalidateQueries({ queryKey: ["title"] }),
       ]);
     },
@@ -52,6 +53,7 @@ export function useWatchlistRemoveMutation() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["watchlist"] }),
         queryClient.invalidateQueries({ queryKey: ["home"] }),
+        queryClient.invalidateQueries({ queryKey: ["up-next"] }),
       ]);
     },
   });
@@ -70,6 +72,7 @@ export function useProgressMutation(showId?: string) {
         queryClient.invalidateQueries({ queryKey: queryKeys.progress(showId) }),
         queryClient.invalidateQueries({ queryKey: ["title"] }),
         queryClient.invalidateQueries({ queryKey: ["home"] }),
+        queryClient.invalidateQueries({ queryKey: ["up-next"] }),
         queryClient.invalidateQueries({ queryKey: ["watchlist"] }),
       ]);
     },
@@ -89,6 +92,9 @@ export function useCreateReviewMutation(type: MediaType, titleId: string) {
         queryClient.invalidateQueries({
           queryKey: queryKeys.title(type, titleId),
         }),
+        queryClient.invalidateQueries({ queryKey: ["watchlist"] }),
+        queryClient.invalidateQueries({ queryKey: ["home"] }),
+        queryClient.invalidateQueries({ queryKey: ["up-next"] }),
         queryClient.invalidateQueries({ queryKey: ["profile"] }),
         queryClient.invalidateQueries({ queryKey: ["feed"] }),
       ]);

@@ -67,7 +67,7 @@ export default function UserProfileScreen() {
           <ProfileStats profile={profile.data} />
           <ProfileTabs value={tab} onChange={setTab} />
           {tab === "overview" ? (
-            <ProfileOverview profile={profile.data} onTabChange={setTab} />
+            <ProfileOverview profile={profile.data} />
           ) : null}
           {tab === "history" ? (
             <ProfileLogList

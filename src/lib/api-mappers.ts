@@ -59,12 +59,13 @@ export function mapWatchlistPayload(payload: unknown): WatchlistPayload {
 export function mapUpNextPayload(payload: unknown): HomePayload {
   const raw = asRecord(payload);
   const upNext = normalizeUpNextItem(raw.primary);
-  const continueWatching = asArray(raw.items)
+  const upNextItems = asArray(raw.items)
     .map(normalizeUpNextItem)
     .filter(Boolean) as TitleSummary[];
   return {
     upNext,
-    continueWatching,
+    upNextItems,
+    continueWatching: upNextItems,
     favourites: [],
     activity: [],
   };
@@ -73,15 +74,32 @@ export function mapUpNextPayload(payload: unknown): HomePayload {
 export function mapHomePayload(payload: unknown): HomePayload {
   const raw = asRecord(payload);
   const upNext = mapUpNextPayload(raw.upNext ?? raw);
-  const watchlist = mapWatchlistPayload(raw.watchlist);
-  const favourites = [
-    ...(watchlist.shows ?? []),
-    ...(watchlist.movies ?? []),
-  ].filter((item) => item.isFavourite);
+  const watchlistRaw = asRecord(raw.watchlist);
+  const watchlist = mapWatchlistPayload(watchlistRaw);
+  const progressRows = asArray(raw.progress);
+  const watchedEpisodeIds = new Set(
+    progressRows
+      .map((item) => nullableString(asRecord(item).episodeId))
+      .filter(Boolean),
+  );
+  const shows = watchlist.shows ?? [];
+  const movies = watchlist.movies ?? [];
+  const continueWatching = asArray(watchlistRaw.shows)
+    .map((item) => normalizeContinueWatchingRow(item, watchedEpisodeIds))
+    .filter(Boolean) as TitleSummary[];
+  const favourites = [...shows, ...movies].filter((item) => item.isFavourite);
 
   return {
     ...upNext,
+    shows,
+    movies,
+    continueWatching: continueWatching.length
+      ? continueWatching
+      : upNext.continueWatching,
     favourites,
+    recentWatches: progressRows
+      .map(normalizeRecentWatch)
+      .filter(Boolean) as TitleSummary[],
     activity: asArray(raw.activity)
       .map(normalizeActivityItem)
       .filter(Boolean) as HomePayload["activity"],
@@ -464,6 +482,94 @@ function normalizeActivityUser(
   };
 }
 
+function normalizeContinueWatchingRow(
+  item: unknown,
+  watchedEpisodeIds: Set<string | null>,
+): TitleSummary | null {
+  const row = asRecord(item);
+  const base = normalizeWatchlistRow(row, "show");
+  if (!base || (base.status !== "WATCHING" && base.status !== "CAUGHT_UP")) {
+    return null;
+  }
+
+  const show = asRecord(row.show);
+  const episodes = sortedEpisodes(show);
+  const next = episodes.find(
+    (episode) => !watchedEpisodeIds.has(nullableString(episode.id)),
+  );
+  if (!next) return null;
+
+  const watched = episodes.filter((episode) =>
+    watchedEpisodeIds.has(nullableString(episode.id)),
+  ).length;
+  const total = episodes.length;
+  const seasonNumber = numberOrUndefined(next.seasonNumber);
+  const episodeNumber = numberOrUndefined(next.episodeNumber);
+  const episodeTitle = stringValue(next.name ?? next.title, "Episode");
+
+  return {
+    ...base,
+    nextLabel: episodeCode(seasonNumber, episodeNumber, episodeTitle),
+    episodeLabel: episodeCode(seasonNumber, episodeNumber),
+    nextEpisodeId: nullableString(next.id),
+    episodeStillUrl: tmdbImageUrl(next.stillPath ?? next.stillUrl, "w780"),
+    runtimeLabel:
+      numberOrUndefined(next.runtime) !== undefined
+        ? `${numberOrUndefined(next.runtime)} min`
+        : base.runtimeLabel,
+    progress: { watched, total },
+    progressLabel: `${watched}/${total} eps`,
+  };
+}
+
+function normalizeRecentWatch(item: unknown): TitleSummary | null {
+  const raw = asRecord(item);
+  const episode = asRecord(raw.episode);
+  const season = asRecord(episode.season);
+  const show = asRecord(season.show);
+  const showId = nullableString(show.id);
+  if (!showId) return null;
+
+  const seasonNumber = numberOrUndefined(episode.seasonNumber);
+  const episodeNumber = numberOrUndefined(episode.episodeNumber);
+  return {
+    id: showId,
+    type: "show",
+    activityId: stringValue(
+      raw.id ?? raw.episodeId ?? episode.id ?? raw.watchedAt ?? showId,
+    ),
+    title: stringValue(show.title, "Untitled"),
+    posterUrl: tmdbImageUrl(show.posterPath),
+    nextLabel: episodeCode(seasonNumber, episodeNumber),
+    episodeLabel: episodeCode(seasonNumber, episodeNumber),
+    watchedAt: nullableString(raw.watchedAt),
+  };
+}
+
+function sortedEpisodes(show: AnyRecord) {
+  return asArray(show.seasons)
+    .flatMap((season) => asArray(asRecord(season).episodes))
+    .map(asRecord)
+    .sort((left, right) => {
+      const leftSeason = numberOrUndefined(left.seasonNumber) ?? 0;
+      const rightSeason = numberOrUndefined(right.seasonNumber) ?? 0;
+      if (leftSeason !== rightSeason) return leftSeason - rightSeason;
+      return (
+        (numberOrUndefined(left.episodeNumber) ?? 0) -
+        (numberOrUndefined(right.episodeNumber) ?? 0)
+      );
+    });
+}
+
+function episodeCode(
+  seasonNumber: number | undefined,
+  episodeNumber: number | undefined,
+  title?: string,
+) {
+  const code = `S${seasonNumber ?? "?"}E${episodeNumber ?? "?"}`;
+  return title ? `${code} · ${title}` : code;
+}
+
 function feedTitle(log: AnyRecord) {
   const show = asRecord(log.show);
   const movie = asRecord(log.movie);
@@ -481,6 +587,7 @@ function normalizeUpNextItem(item: unknown): TitleSummary | null {
   const progress = asRecord(raw.progress);
   const watched = numberOrUndefined(progress.watched);
   const total = numberOrUndefined(progress.total);
+  const availability = availabilitySummary(raw.availability);
   return {
     id: stringValue(raw.id),
     type,
@@ -493,17 +600,26 @@ function normalizeUpNextItem(item: unknown): TitleSummary | null {
     posterUrl: tmdbImageUrl(raw.posterPath ?? raw.posterUrl),
     backdropUrl: tmdbImageUrl(raw.backdropPath ?? raw.backdropUrl, "w780"),
     episodeStillUrl: tmdbImageUrl(raw.stillPath ?? raw.stillUrl, "w780"),
+    reasonLabel: nullableString(raw.reason),
     nextLabel: nullableString(raw.subtitle),
     progressLabel:
       watched !== undefined && total !== undefined
         ? `${watched}/${total} watched`
         : null,
+    progress:
+      watched !== undefined && total !== undefined ? { watched, total } : null,
     nextEpisodeId: nullableString(progress.nextEpisodeId),
     runtimeLabel:
       numberOrUndefined(raw.runtime) !== undefined
         ? `${numberOrUndefined(raw.runtime)} min`
         : null,
-    provider: primaryProvider(raw.availability),
+    genres: asArray(raw.genres).map(String),
+    provider: availability.provider,
+    providers: availability.providers,
+    availabilityLabel: availability.label,
+    isAvailableOnSelected: availability.isAvailableOnSelected,
+    hasAnyProvider: availability.hasAnyProvider,
+    providerRegion: availability.region,
   };
 }
 
@@ -513,6 +629,9 @@ function normalizeTitleLike(
   userState: AnyRecord = {},
 ): TitleSummary {
   const status = nullableString(userState.status ?? source.status);
+  const availability = availabilitySummary(
+    source.availability ?? userState.availability,
+  );
   return {
     id: stringValue(source.id),
     type,
@@ -532,7 +651,13 @@ function normalizeTitleLike(
     status,
     isFavourite: Boolean(userState.isFavourite ?? source.isFavourite),
     isWatched: status === "WATCHED" || status === "COMPLETED",
-    provider: primaryProvider(source.availability ?? userState.availability),
+    genres: asArray(source.genres).map(String),
+    provider: availability.provider,
+    providers: availability.providers,
+    availabilityLabel: availability.label,
+    isAvailableOnSelected: availability.isAvailableOnSelected,
+    hasAnyProvider: availability.hasAnyProvider,
+    providerRegion: availability.region,
   };
 }
 
@@ -714,18 +839,18 @@ function normalizeProfilePin(item: unknown): ProfilePin | null {
     };
   }
 
-  if (typeText === "LIST" || raw.listId || list.id) {
-    const id = raw.listId ?? list.id;
-    if (!id) return null;
-    return {
-      id: stringValue(id),
-      type: "list",
-      title: stringValue(raw.title ?? list.title, "List"),
-      subtitle: nullableString(list.description) ?? "Custom list",
-      posterUrl: tmdbImageUrl(asArray(list.covers)[0]),
-      href: `/list/${stringValue(id)}`,
-    };
-  }
+	  if (typeText === "LIST" || raw.listId || list.id) {
+	    const id = raw.listId ?? list.id;
+	    if (!id) return null;
+	    return {
+	      id: stringValue(id),
+	      type: "list",
+	      title: stringValue(raw.title ?? list.title, "List"),
+	      subtitle: nullableString(list.description) ?? "Custom list",
+	      posterUrl: profileListPinPosterUrl(list),
+	      href: `/list/${stringValue(id)}`,
+	    };
+	  }
 
   if (typeText === "LOG" || raw.logId || log.id) {
     const id = raw.logId ?? log.id;
@@ -743,7 +868,47 @@ function normalizeProfilePin(item: unknown): ProfilePin | null {
     };
   }
 
-  return null;
+	  return null;
+	}
+
+function profileListPinPosterUrl(list: AnyRecord) {
+  const directCover = tmdbImageUrl(
+    list.coverUrl ?? list.coverPath ?? list.posterUrl ?? list.posterPath,
+  );
+  if (directCover) return directCover;
+
+  const cover = asArray(list.covers)
+    .map((item) => {
+      const record = asRecord(item);
+      return tmdbImageUrl(
+        item ??
+          record.url ??
+          record.posterUrl ??
+          record.posterPath ??
+          record.coverUrl ??
+          record.coverPath,
+      );
+    })
+    .find(Boolean);
+  if (cover) return cover;
+
+  return (
+    asArray(list.items)
+      .map((item) => {
+        const record = asRecord(item);
+        const show = asRecord(record.show);
+        const movie = asRecord(record.movie);
+        return tmdbImageUrl(
+          record.posterUrl ??
+            record.posterPath ??
+            movie.posterUrl ??
+            movie.posterPath ??
+            show.posterUrl ??
+            show.posterPath,
+        );
+      })
+      .find(Boolean) ?? null
+  );
 }
 
 function normalizeProfileCalendarDay(item: unknown): ProfileCalendarDay | null {
@@ -889,6 +1054,40 @@ function primaryProvider(input: unknown): ProviderSummary | null {
       return record.selected;
     }) ?? providerList(input)[0];
   return provider ?? null;
+}
+
+function availabilitySummary(input: unknown): {
+  provider: ProviderSummary | null;
+  providers: ProviderSummary[];
+  label: string | null;
+  isAvailableOnSelected: boolean;
+  hasAnyProvider: boolean;
+  region: string | null;
+} {
+  const raw = asRecord(input);
+  const providers = providerList(input);
+  const selectedProviders = providers.filter((provider) => provider.selected);
+  const provider = selectedProviders[0] ?? providers[0] ?? null;
+  const isAvailableOnSelected = Boolean(raw.hasSelected);
+  const hasAnyProvider = Boolean(raw.hasAny ?? providers.length > 0);
+
+  let label: string | null = null;
+  if (isAvailableOnSelected) {
+    label = provider ? `On ${provider.name}` : "On selected services";
+  } else if (hasAnyProvider) {
+    label = "Available outside your services";
+  } else if (input && Object.keys(raw).length) {
+    label = "No streaming match";
+  }
+
+  return {
+    provider,
+    providers,
+    label,
+    isAvailableOnSelected,
+    hasAnyProvider,
+    region: regionCode(raw.region),
+  };
 }
 
 function providerList(input: unknown): ProviderSummary[] {

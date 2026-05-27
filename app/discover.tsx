@@ -23,8 +23,8 @@ export default function DiscoverScreen() {
       {!discover.isLoading && !rows.length ? (
         <EmptyState title="No discovery rows" />
       ) : null}
-      {rows.map((row) => (
-        <Section key={row.id} title={row.title}>
+      {rows.map((row, index) => (
+        <Section key={`${row.id}-${index}`} title={row.title}>
           <TitleRail items={row.items} empty="Nothing in this row." />
         </Section>
       ))}

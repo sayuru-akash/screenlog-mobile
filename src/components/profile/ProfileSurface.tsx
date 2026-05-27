@@ -1,10 +1,13 @@
 import { router } from "expo-router";
+import { useState } from "react";
 import {
   BookMarked,
+  ChevronRight,
   Clock,
-  List,
+  Film,
+  Heart,
   MessageSquare,
-  Users,
+  Tv,
 } from "lucide-react-native";
 import { Pressable, ScrollView, View } from "react-native";
 import { Image } from "expo-image";
@@ -13,12 +16,20 @@ import { EmptyState } from "@/components/primitives/StateViews";
 import { AppText } from "@/components/primitives/Text";
 import { ActivityCalendar } from "./ActivityCalendar";
 import { ProfilePins } from "./ProfilePins";
+import {
+  type ProfileLibrarySection,
+  profileLibrarySectionCopy,
+  selectProfileLibraryItems,
+} from "@/features/profile/library-sections";
+import { profileStatsForSummary } from "@/features/profile/profile-summary";
 import { initials } from "@/lib/format";
 import { useTheme } from "@/lib/theme";
 import type {
   CustomListSummary,
   ProfilePayload,
   ReviewSummary,
+  TitleSummary,
+  WatchlistPayload,
 } from "@/types/domain";
 
 export type ProfileTab = "overview" | "history" | "reviews" | "lists";
@@ -33,9 +44,11 @@ const tabs: Array<{ value: ProfileTab; label: string }> = [
 export function ProfileHero({
   profile,
   action,
+  showUsername = true,
 }: {
   profile: ProfilePayload;
   action?: React.ReactNode;
+  showUsername?: boolean;
 }) {
   const theme = useTheme();
   const user = profile.user;
@@ -84,9 +97,11 @@ export function ProfileHero({
           <AppText variant="heading" numberOfLines={1}>
             {user?.name || user?.username || "Watchlog"}
           </AppText>
-          <AppText muted numberOfLines={1}>
-            {user?.username ? `@${user.username}` : "Watchlog profile"}
-          </AppText>
+          {showUsername ? (
+            <AppText muted numberOfLines={1}>
+              {user?.username ? `@${user.username}` : "Watchlog profile"}
+            </AppText>
+          ) : null}
           {user?.bio ? (
             <AppText muted numberOfLines={3}>
               {user.bio}
@@ -146,57 +161,90 @@ function ProfileMetric({
 
 export function ProfileStats({ profile }: { profile: ProfilePayload }) {
   const theme = useTheme();
-  const stats = profile.stats ?? {};
-  const items = [
-    {
-      label: "Shows",
-      value: stats["Shows tracked"] ?? stats["Visible Log Count"] ?? 0,
-      icon: BookMarked,
-    },
-    {
-      label: "Reviews",
-      value: stats.Reviews ?? stats["Visible Review Count"] ?? 0,
-      icon: MessageSquare,
-    },
-    {
-      label: "Lists",
-      value: stats.Lists ?? stats["Visible List Count"] ?? 0,
-      icon: List,
-    },
-    { label: "Watch time", value: stats["Watch time"] ?? "0m", icon: Clock },
-    { label: "Followers", value: stats.Followers ?? 0, icon: Users },
-  ];
+  const [containerWidth, setContainerWidth] = useState(0);
+  const iconByLabel = {
+    "Watch time": Clock,
+    Movies: Film,
+    Shows: BookMarked,
+    Reviews: MessageSquare,
+  };
+  const items = profileStatsForSummary(profile);
+  const gap = theme.spacing.md;
+  const cardWidth =
+    containerWidth > 0 ? Math.max(154, (containerWidth - gap) / 2) : 168;
   return (
     <View
-      style={{ flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm }}
-    >
-      {items.map((item) => {
-        const Icon = item.icon;
-        return (
-          <View
-            key={item.label}
-            style={{
-              width: "31.5%",
-              minWidth: 104,
-              flexGrow: 1,
-              borderWidth: 1,
-              borderColor: theme.colors.border,
-              borderRadius: theme.radius.md,
-              backgroundColor: theme.colors.surface,
-              padding: theme.spacing.md,
-              gap: theme.spacing.xs,
-            }}
-          >
-            <Icon size={15} color={theme.colors.muted} />
-            <AppText variant="heading" numberOfLines={1}>
-              {String(item.value)}
-            </AppText>
-            <AppText variant="caption" muted>
-              {item.label}
-            </AppText>
-          </View>
+      onLayout={(event) => {
+        const nextWidth = event.nativeEvent.layout.width;
+        setContainerWidth((current) =>
+          Math.abs(current - nextWidth) > 1 ? nextWidth : current,
         );
-      })}
+      }}
+      style={{
+        marginRight: -theme.spacing.lg,
+      }}
+    >
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        decelerationRate="fast"
+        snapToInterval={cardWidth + gap}
+        snapToAlignment="start"
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            gap,
+            paddingRight: theme.spacing.lg,
+          }}
+        >
+          {items.map((item) => {
+            const Icon = iconByLabel[item.label];
+            return (
+              <View
+                key={item.label}
+                accessibilityLabel={item.accessibilityLabel}
+                style={{
+                  width: cardWidth,
+                  minHeight: 108,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  borderRadius: theme.radius.md,
+                  backgroundColor: theme.colors.surface,
+                  padding: theme.spacing.lg,
+                  gap: theme.spacing.md,
+                }}
+              >
+                <View
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 17,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: theme.colors.surfaceMuted,
+                  }}
+                >
+                  <Icon size={17} color={theme.colors.accent} />
+                </View>
+                <View style={{ gap: 2 }}>
+                  <AppText
+                    variant="heading"
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.78}
+                  >
+                    {item.displayValue}
+                  </AppText>
+                  <AppText variant="caption" muted numberOfLines={1}>
+                    {item.label}
+                  </AppText>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -228,77 +276,285 @@ export function ProfileTabs({
 
 export function ProfileOverview({
   profile,
-  onTabChange,
-  canCreateLists,
+  library,
+  libraryLoading,
 }: {
   profile: ProfilePayload;
-  onTabChange: (value: ProfileTab) => void;
-  canCreateLists?: boolean;
+  library?: WatchlistPayload;
+  libraryLoading?: boolean;
 }) {
   const theme = useTheme();
-  const lists = profile.lists ?? [];
-  const logs = profile.logs ?? [];
+  const favorites = selectProfileLibraryItems("favorites", library);
+  const completedShows = selectProfileLibraryItems("completed-shows", library);
+  const watchedMovies = selectProfileLibraryItems("watched-movies", library);
   return (
     <View style={{ gap: theme.spacing.xl }}>
       <ActivityCalendar days={profile.calendar} />
       <ProfilePins pins={profile.pinned} />
-      {lists.length ? (
-        <View style={{ gap: theme.spacing.md }}>
+      {libraryLoading ? <ProfileLibraryLoading /> : null}
+      {!libraryLoading && library ? (
+        <ProfileLibrarySections
+          favorites={favorites}
+          completedShows={completedShows}
+          watchedMovies={watchedMovies}
+        />
+      ) : null}
+      <GenreChips stats={profile.stats} />
+    </View>
+  );
+}
+
+export function ProfileLibrarySections({
+  favorites,
+  completedShows,
+  watchedMovies,
+}: {
+  favorites: TitleSummary[];
+  completedShows: TitleSummary[];
+  watchedMovies: TitleSummary[];
+}) {
+  const theme = useTheme();
+  return (
+    <View style={{ gap: theme.spacing.xl }}>
+      <ProfileTitlePreviewSection
+        title={profileLibrarySectionCopy.favorites.title}
+        icon={profileLibrarySectionCopy.favorites.icon}
+        items={favorites}
+        empty={profileLibrarySectionCopy.favorites.empty}
+        section="favorites"
+      />
+      <ProfileTitlePreviewSection
+        title={profileLibrarySectionCopy["completed-shows"].title}
+        icon={profileLibrarySectionCopy["completed-shows"].icon}
+        items={completedShows}
+        empty={profileLibrarySectionCopy["completed-shows"].empty}
+        section="completed-shows"
+      />
+      <ProfileTitlePreviewSection
+        title={profileLibrarySectionCopy["watched-movies"].title}
+        icon={profileLibrarySectionCopy["watched-movies"].icon}
+        items={watchedMovies}
+        empty={profileLibrarySectionCopy["watched-movies"].empty}
+        section="watched-movies"
+      />
+    </View>
+  );
+}
+
+function ProfileLibraryLoading() {
+  const theme = useTheme();
+  return (
+    <View style={{ gap: theme.spacing.md }}>
+      {[0, 1].map((section) => (
+        <View key={section} style={{ gap: theme.spacing.md }}>
           <View
             style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
+              width: 150,
+              height: 24,
+              borderRadius: theme.radius.sm,
+              backgroundColor: theme.colors.surfaceMuted,
             }}
-          >
-            <AppText variant="heading">Lists</AppText>
-            <Button variant="ghost" onPress={() => onTabChange("lists")}>
-              View all
-            </Button>
+          />
+          <View style={{ flexDirection: "row", gap: theme.spacing.md }}>
+            {[0, 1].map((item) => (
+              <View
+                key={item}
+                style={{
+                  flex: 1,
+                  aspectRatio: 2 / 3,
+                  borderRadius: theme.radius.sm,
+                  backgroundColor: theme.colors.surfaceMuted,
+                }}
+              />
+            ))}
           </View>
-          <ProfileListGrid lists={lists.slice(0, 3)} compact />
         </View>
-      ) : canCreateLists ? (
+      ))}
+    </View>
+  );
+}
+
+function ProfileTitlePreviewSection({
+  title,
+  icon,
+  items,
+  empty,
+  section,
+}: {
+  title: string;
+  icon: "favorites" | "shows" | "movies";
+  items: TitleSummary[];
+  empty: string;
+  section: ProfileLibrarySection;
+}) {
+  const theme = useTheme();
+  const Icon = icon === "favorites" ? Heart : icon === "shows" ? Tv : Film;
+  return (
+    <View style={{ gap: theme.spacing.md }}>
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: theme.spacing.md,
+        }}
+      >
         <View
           style={{
-            borderWidth: 1,
-            borderStyle: "dashed",
-            borderColor: theme.colors.border,
-            borderRadius: theme.radius.md,
-            backgroundColor: theme.colors.surface,
-            padding: theme.spacing.lg,
+            flex: 1,
+            minWidth: 0,
+            flexDirection: "row",
+            alignItems: "center",
             gap: theme.spacing.sm,
           }}
         >
-          <AppText variant="label">Lists</AppText>
-          <AppText muted>
-            Create custom collections to feature on your profile.
+          <Icon size={18} color={theme.colors.accent} />
+          <AppText variant="heading" numberOfLines={1}>
+            {title}
           </AppText>
-          <Button variant="secondary" onPress={() => router.push("/lists")}>
-            Create List
-          </Button>
         </View>
-      ) : null}
-      <View style={{ gap: theme.spacing.md }}>
+        {items.length ? (
+          <Button
+            variant="ghost"
+            icon={<ChevronRight size={16} color={theme.colors.text} />}
+            onPress={() => router.push(`/profile/library/${section}`)}
+          >
+            View all
+          </Button>
+        ) : null}
+      </View>
+      {items.length ? (
+        <ProfileTitleSlider items={items.slice(0, 10)} />
+      ) : (
+        <EmptyState title={empty} />
+      )}
+    </View>
+  );
+}
+
+function ProfileTitleSlider({ items }: { items: TitleSummary[] }) {
+  const theme = useTheme();
+  const [containerWidth, setContainerWidth] = useState(0);
+  const gap = theme.spacing.md;
+  const cardWidth =
+    containerWidth > 0 ? Math.max(132, (containerWidth - gap) / 2) : 156;
+
+  return (
+    <View
+      onLayout={(event) => {
+        const nextWidth = event.nativeEvent.layout.width;
+        setContainerWidth((current) =>
+          Math.abs(current - nextWidth) > 1 ? nextWidth : current,
+        );
+      }}
+    >
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        decelerationRate="fast"
+        snapToInterval={cardWidth + gap}
+        snapToAlignment="start"
+      >
         <View
           style={{
             flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
+            gap,
+            paddingRight: theme.spacing.lg,
           }}
         >
-          <AppText variant="heading">Recent watches</AppText>
-          <Button variant="ghost" onPress={() => onTabChange("history")}>
-            View history
-          </Button>
+          {items.map((item, index) => (
+            <ProfileTitleCard
+              key={`${item.type}-${item.id}-${index}`}
+              item={item}
+              width={cardWidth}
+            />
+          ))}
         </View>
-        <ProfileLogList
-          logs={logs.slice(0, 8)}
-          empty="Watched titles will appear here."
-        />
-      </View>
-      <GenreChips stats={profile.stats} />
+      </ScrollView>
     </View>
+  );
+}
+
+export function ProfileTitleGrid({ items }: { items: TitleSummary[] }) {
+  const theme = useTheme();
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: theme.spacing.md,
+      }}
+    >
+      {items.map((item, index) => (
+        <ProfileTitleCard
+          key={`${item.type}-${item.id}-${index}`}
+          item={item}
+        />
+      ))}
+    </View>
+  );
+}
+
+export function ProfileTitleCard({
+  item,
+  width,
+}: {
+  item: TitleSummary;
+  width?: number;
+}) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${item.title}`}
+      onPress={() => router.push(`/${item.type}/${item.id}`)}
+      style={({ pressed }) => ({
+        width: width ?? "47.8%",
+        minWidth: width ?? 132,
+        flexGrow: width ? 0 : 1,
+        opacity: pressed ? 0.72 : 1,
+        gap: theme.spacing.sm,
+      })}
+    >
+      <View
+        style={{
+          aspectRatio: 2 / 3,
+          borderRadius: theme.radius.sm,
+          backgroundColor: theme.colors.surfaceMuted,
+          overflow: "hidden",
+        }}
+      >
+        {item.posterUrl ? (
+          <Image
+            source={{ uri: item.posterUrl }}
+            style={{ width: "100%", height: "100%" }}
+            contentFit="cover"
+          />
+        ) : (
+          <View
+            style={{
+              flex: 1,
+              justifyContent: "flex-end",
+              padding: theme.spacing.md,
+            }}
+          >
+            <AppText variant="label">{item.title}</AppText>
+          </View>
+        )}
+      </View>
+      <View style={{ gap: 2 }}>
+        <AppText variant="label" numberOfLines={1}>
+          {item.title}
+        </AppText>
+        <AppText variant="caption" muted numberOfLines={1}>
+          {item.progressLabel ||
+            item.runtimeLabel ||
+            item.year ||
+            item.status ||
+            "Watchlog"}
+        </AppText>
+      </View>
+    </Pressable>
   );
 }
 
@@ -313,9 +569,9 @@ export function ProfileListGrid({
   if (!lists?.length) return <EmptyState title="No visible lists" />;
   return (
     <View style={{ gap: theme.spacing.md }}>
-      {lists.map((list) => (
+      {lists.map((list, index) => (
         <Pressable
-          key={list.id}
+          key={`${list.id}-${index}`}
           accessibilityRole="button"
           accessibilityLabel={`Open ${list.title}`}
           onPress={() => router.push(`/list/${list.id}`)}
@@ -374,9 +630,9 @@ export function ProfileLogList({
   if (!logs?.length) return <EmptyState title={empty} />;
   return (
     <View style={{ gap: theme.spacing.sm }}>
-      {logs.map((log) => (
+      {logs.map((log, index) => (
         <Pressable
-          key={log.id}
+          key={`${log.id}-${log.createdAt ?? log.watchedAt ?? index}`}
           accessibilityRole="button"
           accessibilityLabel={`Open ${log.title ?? "review"}`}
           onPress={() => router.push(`/log/${log.id}`)}
@@ -423,10 +679,14 @@ export function GenreChips({ stats }: { stats?: ProfilePayload["stats"] }) {
   const raw = stats?.["Top genres"];
   const genres =
     typeof raw === "string"
-      ? raw
-          .split(",")
-          .map((value) => value.trim())
-          .filter(Boolean)
+      ? Array.from(
+          new Set(
+            raw
+              .split(",")
+              .map((value) => value.trim())
+              .filter(Boolean),
+          ),
+        )
       : [];
   if (!genres.length) {
     return (
@@ -446,9 +706,9 @@ export function GenreChips({ stats }: { stats?: ProfilePayload["stats"] }) {
           gap: theme.spacing.sm,
         }}
       >
-        {genres.map((genre) => (
+        {genres.map((genre, index) => (
           <View
-            key={genre}
+            key={`${genre}-${index}`}
             style={{
               borderRadius: 999,
               backgroundColor: theme.colors.surfaceMuted,

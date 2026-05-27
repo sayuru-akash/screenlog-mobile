@@ -54,9 +54,9 @@ export default function WatchlistScreen() {
         <EmptyState title="Nothing here yet" body="Add titles from Search." />
       ) : null}
       <View style={{ gap: theme.spacing.md }}>
-        {items?.map((item) => (
+        {items?.map((item, index) => (
           <TitleRow
-            key={`${item.type}-${item.id}`}
+            key={`${item.type}-${item.id}-${index}`}
             item={item}
             right={
               <View

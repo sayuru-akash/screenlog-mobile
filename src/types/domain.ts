@@ -18,6 +18,12 @@ export type ProviderSummary = {
   logoPath?: string | null;
   displayPriority?: number;
   type?: string | null;
+  selected?: boolean;
+};
+
+export type ProgressSummary = {
+  watched: number;
+  total: number;
 };
 
 export type TitleSummary = {
@@ -30,13 +36,22 @@ export type TitleSummary = {
   posterUrl?: string | null;
   backdropUrl?: string | null;
   episodeStillUrl?: string | null;
+  reasonLabel?: string | null;
   progressLabel?: string | null;
+  progress?: ProgressSummary | null;
   nextLabel?: string | null;
   nextEpisodeId?: string | null;
   runtimeLabel?: string | null;
+  genres?: string[];
+  watchedAt?: string | null;
+  episodeLabel?: string | null;
+  activityId?: string | null;
   status?: WatchStatus | (string & {}) | null;
   isFavourite?: boolean;
   isWatched?: boolean;
+  availabilityLabel?: string | null;
+  isAvailableOnSelected?: boolean;
+  hasAnyProvider?: boolean;
   provider?: ProviderSummary | null;
   providers?: ProviderSummary[];
   providerRegion?: string | null;
@@ -68,8 +83,12 @@ export type ActivityItem = {
 
 export type HomePayload = {
   upNext?: TitleSummary | null;
+  upNextItems?: TitleSummary[];
   continueWatching?: TitleSummary[];
+  shows?: TitleSummary[];
+  movies?: TitleSummary[];
   favourites?: TitleSummary[];
+  recentWatches?: TitleSummary[];
   activity?: ActivityItem[];
 };
 

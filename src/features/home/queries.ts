@@ -1,19 +1,35 @@
 import { useQuery } from "@tanstack/react-query";
-import { mapHomePayload } from "@/lib/api-mappers";
+import { mapHomePayload, mapUpNextPayload } from "@/lib/api-mappers";
 import { queryKeys } from "@/lib/query-keys";
 import { authedApiRequest } from "@/lib/use-api";
 import type { HomePayload } from "@/types/domain";
 
-export function useHomeQuery(filter = "all") {
+export function useHomeQuery() {
   return useQuery({
-    queryKey: queryKeys.home(filter),
+    queryKey: queryKeys.home(),
     queryFn: async (): Promise<HomePayload> => {
-      const [upNext, watchlist] = await Promise.all([
-        authedApiRequest("/up-next", { query: { filter } }),
+      const [watchlist, progress] = await Promise.all([
         authedApiRequest("/watchlist"),
+        authedApiRequest("/progress"),
       ]);
 
-      return mapHomePayload({ upNext, watchlist });
+      return mapHomePayload({
+        watchlist,
+        progress:
+          progress && typeof progress === "object" && "progress" in progress
+            ? progress.progress
+            : progress,
+      });
     },
+  });
+}
+
+export function useUpNextQuery(filter = "all") {
+  return useQuery({
+    queryKey: queryKeys.upNext(filter),
+    queryFn: async (): Promise<HomePayload> =>
+      mapUpNextPayload(
+        await authedApiRequest("/up-next", { query: { filter } }),
+      ),
   });
 }

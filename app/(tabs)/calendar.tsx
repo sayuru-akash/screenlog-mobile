@@ -35,9 +35,9 @@ export default function CalendarScreen() {
       ) : null}
       <Section title="This Week">
         <View style={{ gap: theme.spacing.md }}>
-          {items.map((item) => (
+          {items.map((item, index) => (
             <View
-              key={item.id}
+              key={`${item.id}-${item.episodeId ?? index}`}
               style={{
                 flexDirection: "row",
                 gap: theme.spacing.md,

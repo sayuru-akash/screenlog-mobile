@@ -186,9 +186,9 @@ export default function ListDetailScreen() {
           gap: theme.spacing.md,
         }}
       >
-        {items.map((item) => (
+        {items.map((item, index) => (
           <View
-            key={item.id}
+            key={`${item.id}-${item.type}-${item.rank ?? index}`}
             style={{ width: "47%", flexGrow: 1, maxWidth: 190 }}
           >
             <Pressable
@@ -432,11 +432,11 @@ export default function ListDetailScreen() {
             <ErrorState message={addItem.error.message} />
           ) : null}
           <View style={{ gap: theme.spacing.md }}>
-            {search.data?.results?.map((item) => {
+            {search.data?.results?.map((item, index) => {
               const alreadyAdded = hasSearchResult(item);
               return (
                 <TitleRow
-                  key={`${item.type}-${item.id || item.tmdbId}`}
+                  key={`${item.type}-${item.id || item.tmdbId}-${index}`}
                   item={item}
                   right={
                     <Button

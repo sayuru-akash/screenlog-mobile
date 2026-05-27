@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { mapProfilePayload } from "@/lib/api-mappers";
+import { mapProfilePayload, mapWatchlistPayload } from "@/lib/api-mappers";
 import { queryKeys } from "@/lib/query-keys";
 import { authedApiRequest } from "@/lib/use-api";
-import type { ProfilePayload } from "@/types/domain";
+import type { ProfilePayload, WatchlistPayload } from "@/types/domain";
 
 export function useProfileQuery() {
   return useQuery({
@@ -17,6 +17,14 @@ export function useUserProfileQuery(username: string) {
     queryKey: queryKeys.user(username),
     queryFn: async (): Promise<ProfilePayload> =>
       mapProfilePayload(await authedApiRequest(`/users/${username}`)),
+  });
+}
+
+export function useProfileLibraryQuery() {
+  return useQuery({
+    queryKey: queryKeys.profileLibrary,
+    queryFn: async (): Promise<WatchlistPayload> =>
+      mapWatchlistPayload(await authedApiRequest("/watchlist")),
   });
 }
 

@@ -1,6 +1,14 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { Heart, ListPlus, Pin, Play, RotateCcw, X } from "lucide-react-native";
+import {
+  Check,
+  Heart,
+  ListPlus,
+  Pin,
+  Play,
+  RotateCcw,
+  X,
+} from "lucide-react-native";
 import { useMemo, useState } from "react";
 import {
   Alert,
@@ -35,7 +43,10 @@ import {
   useAddListItemMutation,
   useListsQuery,
 } from "@/features/lists/queries";
-import { useSetProfilePinMutation } from "@/features/profile/queries";
+import {
+  useProfileQuery,
+  useSetProfilePinMutation,
+} from "@/features/profile/queries";
 import { openExternalUrl } from "@/lib/external-links";
 import { useTheme } from "@/lib/theme";
 import type {
@@ -55,6 +66,7 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
   const review = useCreateReviewMutation(type, id);
   const lists = useListsQuery();
   const setPin = useSetProfilePinMutation();
+  const profile = useProfileQuery();
   const [reviewOpen, setReviewOpen] = useState(false);
   const [listPickerOpen, setListPickerOpen] = useState(false);
   const [reviewText, setReviewText] = useState("");
@@ -66,7 +78,13 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
     "PRIVATE" | "FOLLOWERS" | "PUBLIC"
   >("PRIVATE");
   const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
+  const [pinnedKey, setPinnedKey] = useState<string | null>(null);
   const data = title.data;
+  const currentPinKey = `${type}:${id}`;
+  const profileHasPin = Boolean(
+    profile.data?.pinned?.some((pin) => pin.type === type && pin.id === id),
+  );
+  const isPinnedNow = profileHasPin || pinnedKey === currentPinKey;
   const seasons = useMemo(() => data?.seasons ?? [], [data?.seasons]);
   const nextEpisode = seasons
     .flatMap((season) => season.episodes ?? [])
@@ -182,7 +200,34 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                   gap: theme.spacing.md,
                 }}
               >
-                <AppText variant="heading">{data.title}</AppText>
+                <View style={{ gap: theme.spacing.sm }}>
+                  <AppText variant="heading">{data.title}</AppText>
+                  {isPinnedNow ? (
+                    <View
+                      style={{
+                        alignSelf: "flex-start",
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: theme.spacing.xs,
+                        borderRadius: 999,
+                        backgroundColor: theme.colors.accentSoft,
+                        paddingHorizontal: theme.spacing.md,
+                        paddingVertical: theme.spacing.xs,
+                      }}
+                    >
+                      <Pin size={14} color={theme.colors.accent} />
+                      <AppText
+                        variant="caption"
+                        style={{
+                          color: theme.colors.accent,
+                          fontWeight: "700",
+                        }}
+                      >
+                        Pinned to profile
+                      </AppText>
+                    </View>
+                  ) : null}
+                </View>
                 <AppText muted numberOfLines={4}>
                   {data.overview || "No overview yet."}
                 </AppText>
@@ -302,19 +347,28 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                   Add to list
                 </Button>
                 <Button
-                  variant="secondary"
-                  icon={<Pin size={15} color={theme.colors.accent} />}
+                  variant={isPinnedNow ? "primary" : "secondary"}
+                  icon={
+                    isPinnedNow ? (
+                      <Check size={15} color="#FFFFFF" />
+                    ) : (
+                      <Pin size={15} color={theme.colors.accent} />
+                    )
+                  }
                   loading={setPin.isPending}
                   onPress={() =>
-                    setPin.mutate({
-                      type: type === "show" ? "SHOW" : "MOVIE",
-                      showId: type === "show" ? id : undefined,
-                      movieId: type === "movie" ? id : undefined,
-                      rank: 0,
-                    })
+                    setPin.mutate(
+                      {
+                        type: type === "show" ? "SHOW" : "MOVIE",
+                        showId: type === "show" ? id : undefined,
+                        movieId: type === "movie" ? id : undefined,
+                        rank: 0,
+                      },
+                      { onSuccess: () => setPinnedKey(currentPinKey) },
+                    )
                   }
                 >
-                  Pin
+                  {isPinnedNow ? "Pinned" : "Pin"}
                 </Button>
                 {type === "movie" && data.isWatched ? (
                   <Button
@@ -404,9 +458,9 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                         paddingRight: theme.spacing.lg,
                       }}
                     >
-                      {seasons.map((season) => (
+                      {seasons.map((season, index) => (
                         <Button
-                          key={season.id}
+                          key={`${season.id}-${index}`}
                           variant={
                             selectedSeason?.id === season.id
                               ? "secondary"
@@ -443,9 +497,9 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                           Mark Season
                         </Button>
                       </View>
-                      {selectedSeason.episodes?.map((episode) => (
+                      {selectedSeason.episodes?.map((episode, index) => (
                         <View
-                          key={episode.id}
+                          key={`${episode.id}-${index}`}
                           style={{
                             borderWidth: 1,
                             borderColor: theme.colors.border,
@@ -572,9 +626,9 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
               <LoadingState label="Loading trailers" />
             ) : extras.data?.trailers?.length ? (
               <View style={{ gap: theme.spacing.sm }}>
-                {extras.data.trailers.slice(0, 3).map((trailer) => (
+                {extras.data.trailers.slice(0, 3).map((trailer, index) => (
                   <Button
-                    key={trailer.id}
+                    key={`${trailer.id}-${index}`}
                     variant="secondary"
                     icon={<Play size={15} color={theme.colors.accent} />}
                     disabled={!trailer.url}
@@ -598,9 +652,9 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                     paddingRight: theme.spacing.lg,
                   }}
                 >
-                  {extras.data.cast.slice(0, 12).map((person) => (
+                  {extras.data.cast.slice(0, 12).map((person, index) => (
                     <View
-                      key={person.id}
+                      key={`${person.id}-${person.role ?? "cast"}-${index}`}
                       style={{ width: 112, gap: theme.spacing.sm }}
                     >
                       <View
@@ -646,9 +700,9 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                     paddingRight: theme.spacing.lg,
                   }}
                 >
-                  {extras.data.crew.slice(0, 12).map((person) => (
+                  {extras.data.crew.slice(0, 12).map((person, index) => (
                     <View
-                      key={person.id}
+                      key={`${person.id}-${person.role ?? "crew"}-${index}`}
                       style={{
                         minWidth: 140,
                         maxWidth: 180,
@@ -677,9 +731,9 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
           {data.lists?.length ? (
             <Section title="Lists">
               <View style={{ gap: theme.spacing.sm }}>
-                {data.lists.slice(0, 4).map((list) => (
+                {data.lists.slice(0, 4).map((list, index) => (
                   <Button
-                    key={list.id}
+                    key={`${list.id}-${index}`}
                     variant="ghost"
                     onPress={() => router.push(`/list/${list.id}`)}
                   >
@@ -692,8 +746,11 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
           <Section title="Reviews">
             {data.reviews?.length ? (
               <View style={{ gap: theme.spacing.md }}>
-                {data.reviews.slice(0, 3).map((item) => (
-                  <View key={item.id} style={{ gap: theme.spacing.xs }}>
+                {data.reviews.slice(0, 3).map((item, index) => (
+                  <View
+                    key={`${item.id}-${item.createdAt ?? item.watchedAt ?? index}`}
+                    style={{ gap: theme.spacing.xs }}
+                  >
                     <AppText>
                       {item.spoiler
                         ? "Spoiler review"
@@ -848,9 +905,9 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
               ) : null}
               {lists.data?.lists?.length && listItem ? (
                 <View style={{ gap: theme.spacing.sm }}>
-                  {lists.data.lists.map((list) => (
+                  {lists.data.lists.map((list, index) => (
                     <ListPickerRow
-                      key={list.id}
+                      key={`${list.id}-${index}`}
                       list={list}
                       item={listItem}
                       added={addedListIds.has(list.id)}
@@ -897,9 +954,9 @@ function ProviderList({
           gap: theme.spacing.sm,
         }}
       >
-        {providers.slice(0, 8).map((provider) => (
+        {providers.slice(0, 8).map((provider, index) => (
           <ProviderChip
-            key={provider.id ?? provider.name}
+            key={`${provider.id ?? provider.name}-${provider.type ?? "provider"}-${index}`}
             provider={provider}
           />
         ))}

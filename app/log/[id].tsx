@@ -154,9 +154,9 @@ export default function LogDetailScreen() {
       ) : null}
       {comments.isLoading ? <LoadingState label="Loading comments" /> : null}
       {comments.data?.comments?.length ? (
-        comments.data.comments.map((comment) => (
+        comments.data.comments.map((comment, commentIndex) => (
           <View
-            key={comment.id}
+            key={`${comment.id}-${comment.createdAt ?? commentIndex}`}
             style={{
               borderWidth: 1,
               borderColor: theme.colors.border,
@@ -224,8 +224,11 @@ export default function LogDetailScreen() {
               <View
                 style={{ gap: theme.spacing.sm, paddingLeft: theme.spacing.lg }}
               >
-                {comment.replies.map((reply) => (
-                  <View key={reply.id} style={{ gap: theme.spacing.xs }}>
+                {comment.replies.map((reply, replyIndex) => (
+                  <View
+                    key={`${reply.id}-${reply.createdAt ?? replyIndex}`}
+                    style={{ gap: theme.spacing.xs }}
+                  >
                     <CommentBody
                       comment={reply}
                       revealed={revealedComments.has(reply.id)}

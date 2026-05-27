@@ -82,12 +82,12 @@ export default function SearchScreen() {
         <EmptyState title="No matches" />
       ) : null}
       <View style={{ gap: theme.spacing.md }}>
-        {results.map((item) => {
+        {results.map((item, index) => {
           const key = `${item.type}-${item.id || item.tmdbId}`;
           const added = addedKeys.has(key);
           return (
             <TitleRow
-              key={key}
+              key={`${key}-${index}`}
               item={item}
               onPress={() => {
                 if (!item.tmdbId) {

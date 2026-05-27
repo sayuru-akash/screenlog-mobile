@@ -5,8 +5,16 @@ import { useTheme } from "@/lib/theme";
 import type { ProfileCalendarDay } from "@/types/domain";
 import {
   activityDayLabel,
-  visibleActivityDays,
+  buildGithubActivityCalendar,
+  type ActivityCalendarDay,
 } from "./activity-calendar-utils";
+
+const CELL_SIZE = 11;
+const CELL_GAP = 3;
+const WEEKDAY_LABEL_WIDTH = 28;
+const MONTH_LABEL_HEIGHT = 18;
+const GRID_WIDTH = 53 * (CELL_SIZE + CELL_GAP);
+const WEEK_STRIDE = CELL_SIZE + CELL_GAP;
 
 export function ActivityCalendar({
   days = [],
@@ -14,17 +22,12 @@ export function ActivityCalendar({
   days?: ProfileCalendarDay[];
 }) {
   const theme = useTheme();
-  const latest = useMemo(() => visibleActivityDays(days), [days]);
-  const weeks = useMemo(() => buildWeeks(latest), [latest]);
-  const [selected, setSelected] = useState<ProfileCalendarDay | null>(
-    latest.at(-1) ?? null,
-  );
-  const max = Math.max(1, ...latest.map((day) => day.total));
-  const activeDays = latest.filter((day) => day.total > 0).length;
-  const totalActivity = latest.reduce((sum, day) => sum + day.total, 0);
-  const selectedLabel = selected
-    ? activityDayLabel(selected)
-    : "No activity yet.";
+  const calendar = useMemo(() => buildGithubActivityCalendar(days), [days]);
+  const [selected, setSelected] = useState<ActivityCalendarDay | null>(null);
+  const max = Math.max(1, ...calendar.days.map((day) => day.total));
+  const activeDays = calendar.days.filter((day) => day.total > 0).length;
+  const totalActivity = calendar.days.reduce((sum, day) => sum + day.total, 0);
+
   return (
     <View
       style={{
@@ -39,147 +42,153 @@ export function ActivityCalendar({
       <View style={{ gap: theme.spacing.xs }}>
         <AppText variant="heading">Activity</AppText>
         <AppText muted>
-          {activeDays} active days · {totalActivity} total actions
+          {totalActivity} activity {totalActivity === 1 ? "entry" : "entries"}{" "}
+          in the last year
         </AppText>
       </View>
+
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={{ gap: theme.spacing.xs, paddingRight: theme.spacing.lg }}>
+        <View style={{ paddingRight: theme.spacing.lg }}>
           <View
             style={{
-              height: 18,
-              flexDirection: "row",
-              gap: 4,
-              alignItems: "flex-end",
+              height: MONTH_LABEL_HEIGHT,
+              marginLeft: WEEKDAY_LABEL_WIDTH,
+              width: GRID_WIDTH,
             }}
           >
-            {weeks.map((week) => (
+            {calendar.monthLabels.map((month) => (
               <AppText
-                key={`label-${week.key}`}
+                key={month.key}
                 variant="caption"
                 muted
-                style={{ width: 13 }}
                 numberOfLines={1}
+                style={{
+                  position: "absolute",
+                  left: month.weekIndex * WEEK_STRIDE,
+                  top: 0,
+                  width: 34,
+                  fontSize: 10,
+                }}
               >
-                {week.monthLabel}
+                {month.label}
               </AppText>
             ))}
           </View>
-          <View style={{ flexDirection: "row", gap: 4 }}>
-            {weeks.map((week) => (
-              <View key={week.key} style={{ gap: 4 }}>
-                {week.days.map((day, index) =>
-                  day ? (
-                    <Pressable
-                      key={day.date}
-                      accessibilityRole="button"
-                      accessibilityLabel={activityDayLabel(day)}
-                      onPress={() => setSelected(day)}
-                      style={{
-                        width: 13,
-                        height: 13,
-                        borderRadius: 3,
-                        borderWidth: selected?.date === day.date ? 1 : 0,
-                        borderColor: theme.colors.text,
-                        backgroundColor: activityColor(
-                          theme,
-                          day.total / max,
-                          day.total,
-                        ),
-                      }}
-                    />
-                  ) : (
-                    <View
-                      key={`empty-${week.key}-${index}`}
-                      style={{ width: 13, height: 13 }}
-                    />
-                  ),
-                )}
-              </View>
-            ))}
+
+          <View style={{ flexDirection: "row", gap: CELL_GAP }}>
+            <View
+              style={{
+                width: WEEKDAY_LABEL_WIDTH,
+                height: 7 * CELL_SIZE + 6 * CELL_GAP,
+              }}
+            >
+              <WeekdayLabel top={CELL_SIZE + CELL_GAP} label="Mon" />
+              <WeekdayLabel top={3 * (CELL_SIZE + CELL_GAP)} label="Wed" />
+              <WeekdayLabel top={5 * (CELL_SIZE + CELL_GAP)} label="Fri" />
+            </View>
+
+            <View style={{ flexDirection: "row", gap: CELL_GAP }}>
+              {calendar.weeks.map((week) => (
+                <View key={week.key} style={{ gap: CELL_GAP }}>
+                  {week.days.map((day, index) =>
+                    day ? (
+                      <Pressable
+                        key={day.date}
+                        accessibilityRole="button"
+                        accessibilityLabel={activityDayLabel(day)}
+                        accessibilityState={{
+                          selected: selected?.date === day.date,
+                        }}
+                        hitSlop={4}
+                        onPress={() => setSelected(day)}
+                        style={{
+                          width: CELL_SIZE,
+                          height: CELL_SIZE,
+                          borderRadius: 2,
+                          borderWidth: selected?.date === day.date ? 1 : 0,
+                          borderColor:
+                            theme.mode === "dark" ? "#FFFFFF" : "#111111",
+                          backgroundColor: activityColor(
+                            theme,
+                            day.total / max,
+                            day.total,
+                          ),
+                        }}
+                      />
+                    ) : (
+                      <View
+                        key={`empty-${week.key}-${index}`}
+                        style={{ width: CELL_SIZE, height: CELL_SIZE }}
+                      />
+                    ),
+                  )}
+                </View>
+              ))}
+            </View>
           </View>
         </View>
       </ScrollView>
+
+      {selected ? (
+        <AppText variant="caption" muted>
+          {activityDayLabel(selected)}
+        </AppText>
+      ) : null}
+
       <View
         style={{
           flexDirection: "row",
           justifyContent: "space-between",
-          gap: theme.spacing.md,
           alignItems: "center",
+          gap: theme.spacing.md,
         }}
       >
-        <AppText variant="caption" muted style={{ flex: 1 }}>
-          {selectedLabel}
+        <AppText variant="caption" muted>
+          {activeDays} active {activeDays === 1 ? "day" : "days"}
         </AppText>
         <View
           accessibilityLabel="Activity intensity legend"
           style={{ flexDirection: "row", gap: 4, alignItems: "center" }}
         >
-          {[0, 0.2, 0.45, 0.75].map((intensity) => (
+          <AppText variant="caption" muted>
+            Less
+          </AppText>
+          {[0, 0.2, 0.45, 0.75, 1].map((intensity) => (
             <View
               key={intensity}
               style={{
-                width: 11,
-                height: 11,
-                borderRadius: 3,
+                width: CELL_SIZE,
+                height: CELL_SIZE,
+                borderRadius: 2,
                 backgroundColor: activityColor(theme, intensity, intensity),
               }}
             />
           ))}
+          <AppText variant="caption" muted>
+            More
+          </AppText>
         </View>
       </View>
     </View>
   );
 }
 
-function buildWeeks(days: ProfileCalendarDay[]) {
-  const weeks: Array<{
-    key: string;
-    monthLabel: string;
-    days: Array<ProfileCalendarDay | null>;
-  }> = [];
-  let current: Array<ProfileCalendarDay | null> = [];
-
-  days.forEach((day, index) => {
-    const date = new Date(`${day.date}T00:00:00`);
-    const weekday = Number.isNaN(date.getTime())
-      ? current.length
-      : date.getDay();
-    if (index === 0) {
-      current = Array.from({ length: weekday }, () => null);
-    }
-    current.push(day);
-    if (current.length === 7) {
-      weeks.push(toWeek(current, weeks.length));
-      current = [];
-    }
-  });
-
-  if (current.length) {
-    while (current.length < 7) current.push(null);
-    weeks.push(toWeek(current, weeks.length));
-  }
-
-  return weeks;
-}
-
-function toWeek(days: Array<ProfileCalendarDay | null>, index: number) {
-  const firstDay = days.find(Boolean);
-  const date = firstDay ? new Date(`${firstDay.date}T00:00:00`) : null;
-  const previousDate =
-    index > 0 && firstDay
-      ? new Date(
-          new Date(`${firstDay.date}T00:00:00`).setDate(date!.getDate() - 7),
-        )
-      : null;
-  const monthLabel =
-    date && (!previousDate || date.getMonth() !== previousDate.getMonth())
-      ? date.toLocaleDateString(undefined, { month: "short" }).slice(0, 1)
-      : "";
-  return {
-    key: firstDay?.date ?? `week-${index}`,
-    monthLabel,
-    days,
-  };
+function WeekdayLabel({ top, label }: { top: number; label: string }) {
+  return (
+    <AppText
+      variant="caption"
+      muted
+      style={{
+        position: "absolute",
+        top: top - 3,
+        left: 0,
+        width: WEEKDAY_LABEL_WIDTH - 4,
+        fontSize: 10,
+      }}
+    >
+      {label}
+    </AppText>
+  );
 }
 
 function activityColor(
@@ -187,8 +196,9 @@ function activityColor(
   intensity: number,
   total: number,
 ) {
-  if (!total) return theme.colors.surfaceMuted;
-  if (intensity > 0.66) return theme.colors.accent;
-  if (intensity > 0.33) return theme.colors.success;
-  return theme.mode === "dark" ? "#2F2F35" : "#DAD7E8";
+  if (!total) return theme.mode === "dark" ? "#1F1F1F" : "#EBEDF0";
+  if (intensity > 0.75) return theme.mode === "dark" ? "#39D353" : "#216E39";
+  if (intensity > 0.5) return theme.mode === "dark" ? "#26A641" : "#30A14E";
+  if (intensity > 0.25) return theme.mode === "dark" ? "#006D32" : "#40C463";
+  return theme.mode === "dark" ? "#0E4429" : "#9BE9A8";
 }

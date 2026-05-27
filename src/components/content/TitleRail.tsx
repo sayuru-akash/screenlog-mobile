@@ -22,8 +22,12 @@ export function TitleRail({
           paddingRight: theme.spacing.lg,
         }}
       >
-        {items.map((item) => (
-          <PosterCard key={`${item.type}-${item.id}`} item={item} compact />
+        {items.map((item, index) => (
+          <PosterCard
+            key={`${item.type}-${item.id}-${index}`}
+            item={item}
+            compact
+          />
         ))}
       </View>
     </ScrollView>

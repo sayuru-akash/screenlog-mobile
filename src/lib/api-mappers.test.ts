@@ -99,11 +99,25 @@ describe("mapUpNextPayload", () => {
           id: "show-1",
           kind: "show",
           title: "Silo",
+          reason: "Next episode",
           subtitle: "S1E2 · Holston's Pick",
           posterPath: "/silo.jpg",
           backdropPath: "/show-backdrop.jpg",
           stillPath: "/episode-still.jpg",
           progress: { watched: 1, total: 10, nextEpisodeId: "episode-2" },
+          availability: {
+            hasSelected: true,
+            hasAny: true,
+            region: "US",
+            providers: [
+              {
+                id: "provider-1",
+                name: "Apple TV+",
+                logoPath: "/apple.jpg",
+                selected: true,
+              },
+            ],
+          },
         },
         items: [
           {
@@ -119,12 +133,18 @@ describe("mapUpNextPayload", () => {
       upNext: {
         id: "show-1",
         type: "show",
+        reasonLabel: "Next episode",
         nextLabel: "S1E2 · Holston's Pick",
         progressLabel: "1/10 watched",
+        progress: { watched: 1, total: 10 },
         nextEpisodeId: "episode-2",
         backdropUrl: "https://image.tmdb.org/t/p/w780/show-backdrop.jpg",
         episodeStillUrl: "https://image.tmdb.org/t/p/w780/episode-still.jpg",
+        availabilityLabel: "On Apple TV+",
+        isAvailableOnSelected: true,
+        provider: { name: "Apple TV+" },
       },
+      upNextItems: [{ id: "movie-1", type: "movie", runtimeLabel: "117 min" }],
       continueWatching: [
         { id: "movie-1", type: "movie", runtimeLabel: "117 min" },
       ],
@@ -142,7 +162,29 @@ describe("mapHomePayload", () => {
               showId: "show-1",
               isFavourite: true,
               status: "WATCHING",
-              show: { id: "show-1", title: "Severance" },
+              show: {
+                id: "show-1",
+                title: "Severance",
+                seasons: [
+                  {
+                    episodes: [
+                      {
+                        id: "ep-1",
+                        name: "Good News",
+                        seasonNumber: 1,
+                        episodeNumber: 1,
+                      },
+                      {
+                        id: "ep-2",
+                        name: "Half Loop",
+                        seasonNumber: 1,
+                        episodeNumber: 2,
+                        stillPath: "/still.jpg",
+                      },
+                    ],
+                  },
+                ],
+              },
             },
             {
               showId: "show-2",
@@ -162,13 +204,47 @@ describe("mapHomePayload", () => {
           primary: { id: "show-1", kind: "show", title: "Severance" },
           items: [{ id: "movie-1", kind: "movie", title: "Heat" }],
         },
+        progress: [
+          {
+            episodeId: "ep-1",
+            watchedAt: "2026-05-27T10:00:00.000Z",
+            episode: {
+              seasonNumber: 1,
+              episodeNumber: 1,
+              season: {
+                show: {
+                  id: "show-1",
+                  title: "Severance",
+                  posterPath: "/poster.jpg",
+                },
+              },
+            },
+          },
+        ],
       }),
     ).toMatchObject({
       upNext: { id: "show-1", title: "Severance" },
-      continueWatching: [{ id: "movie-1", title: "Heat" }],
+      upNextItems: [{ id: "movie-1", title: "Heat" }],
+      continueWatching: [
+        {
+          id: "show-1",
+          title: "Severance",
+          nextLabel: "S1E2 · Half Loop",
+          episodeStillUrl: "https://image.tmdb.org/t/p/w780/still.jpg",
+          progress: { watched: 1, total: 2 },
+        },
+      ],
       favourites: [
         { id: "show-1", type: "show", title: "Severance" },
         { id: "movie-1", type: "movie", title: "Heat" },
+      ],
+      recentWatches: [
+        {
+          id: "show-1",
+          title: "Severance",
+          episodeLabel: "S1E1",
+          posterUrl: "https://image.tmdb.org/t/p/w500/poster.jpg",
+        },
       ],
     });
   });
@@ -445,7 +521,19 @@ describe("mapProfilePayload", () => {
           {
             type: "LIST",
             listId: "list-1",
-            list: { id: "list-1", title: "Comfort watches" },
+            list: {
+              id: "list-1",
+              title: "Comfort watches",
+              items: [
+                {
+                  movie: {
+                    id: "movie-3",
+                    title: "Aftersun",
+                    posterPath: "/aftersun.jpg",
+                  },
+                },
+              ],
+            },
           },
           {
             type: "LOG",
@@ -483,6 +571,7 @@ describe("mapProfilePayload", () => {
           id: "list-1",
           type: "list",
           title: "Comfort watches",
+          posterUrl: "https://image.tmdb.org/t/p/w500/aftersun.jpg",
           href: "/list/list-1",
         },
         { id: "log-1", type: "log", title: "Silo", href: "/log/log-1" },

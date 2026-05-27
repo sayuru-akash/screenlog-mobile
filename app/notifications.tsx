@@ -49,9 +49,9 @@ export default function NotificationsScreen() {
         <EmptyState title="No notifications" />
       ) : null}
       <View style={{ gap: theme.spacing.md }}>
-        {items.map((item) => (
+        {items.map((item, index) => (
           <Pressable
-            key={item.id}
+            key={`${item.id}-${item.createdAt ?? index}`}
             accessibilityRole={item.href ? "button" : "text"}
             accessibilityLabel={item.href ? `Open ${item.title}` : item.title}
             onPress={() => {

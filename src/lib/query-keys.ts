@@ -17,7 +17,8 @@ export function stableParams<TValue extends ApiQueryValue>(
 
 export const queryKeys = {
   session: ["session"] as const,
-  home: (filter = "all") => ["home", filter] as const,
+  home: () => ["home"] as const,
+  upNext: (filter = "all") => ["up-next", filter] as const,
   watchlist: (params: Record<string, ApiQueryValue> = {}) =>
     ["watchlist", stableParams(params)] as const,
   search: (params: Record<string, ApiQueryValue>) =>
@@ -32,6 +33,7 @@ export const queryKeys = {
   notifications: ["notifications"] as const,
   settings: ["settings"] as const,
   profile: ["profile"] as const,
+  profileLibrary: ["profile-library"] as const,
   user: (username: string) => ["user", username] as const,
   feed: ["feed"] as const,
   lists: (username?: string) => ["lists", username ?? "me"] as const,

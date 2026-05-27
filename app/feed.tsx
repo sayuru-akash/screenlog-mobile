@@ -34,10 +34,13 @@ export default function FeedScreen() {
         <EmptyState title="No feed activity" />
       ) : null}
       <View style={{ gap: theme.spacing.md }}>
-        {items.map((item) => {
+        {items.map((item, index) => {
           const route = mobileRouteFromHref(item.href);
           return (
-            <View key={item.id} style={{ gap: theme.spacing.xs }}>
+            <View
+              key={`${item.id}-${item.href ?? index}`}
+              style={{ gap: theme.spacing.xs }}
+            >
               <AppText>{item.text}</AppText>
               {route ? (
                 <Button
