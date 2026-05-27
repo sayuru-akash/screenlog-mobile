@@ -64,7 +64,6 @@ export default function WatchlistScreen() {
         spoiler: false,
         rewatch: false,
         visibility: "PRIVATE",
-        tags: "",
       }),
     );
   };

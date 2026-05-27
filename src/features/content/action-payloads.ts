@@ -37,7 +37,6 @@ export type ReviewDraft = {
   spoiler: boolean;
   rewatch?: boolean;
   visibility: Visibility;
-  tags?: string;
   privateNotes?: string | null;
 };
 
@@ -68,7 +67,6 @@ export function buildReviewPayload(draft: ReviewDraft) {
     review: draft.review.trim() || null,
     spoiler: draft.spoiler,
     rewatch: draft.rewatch ?? false,
-    tags: parseTags(draft.tags ?? ""),
     privateNotes: draft.privateNotes?.trim() || null,
     visibility: draft.visibility,
   });
@@ -86,17 +84,6 @@ export function titleToWatchlistInput(
     posterPath: item.posterUrl,
     backdropPath: item.backdropUrl,
   }) as WatchlistUpdateInput;
-}
-
-function parseTags(value: string) {
-  return Array.from(
-    new Set(
-      value
-        .split(",")
-        .map((tag) => tag.trim().toLowerCase())
-        .filter(Boolean),
-    ),
-  ).slice(0, 12);
 }
 
 function compactObject<T extends Record<string, unknown>>(value: T) {

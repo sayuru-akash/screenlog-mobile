@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { mapCommentsPayload, mapLogPayload } from "@/lib/api-mappers";
 import { queryKeys } from "@/lib/query-keys";
 import { authedApiRequest } from "@/lib/use-api";
-import type { ReviewSummary } from "@/types/domain";
+import type { ReviewSummary, Visibility } from "@/types/domain";
 
 export function useLogQuery(id: string) {
   return useQuery({
@@ -82,6 +82,7 @@ export function useUpdateLogMutation(id: string) {
       rating?: number | null;
       review?: string | null;
       spoiler?: boolean;
+      visibility?: Visibility;
     }) =>
       authedApiRequest(`/logs/${id}`, {
         method: "PATCH",

@@ -45,25 +45,24 @@ describe("normalizeRating", () => {
 });
 
 describe("buildReviewPayload", () => {
-  it("builds a movie review payload with trimmed text and tags", () => {
-    expect(
-      buildReviewPayload({
-        type: "movie",
-        movieId: "movie_1",
-        rating: "9",
-        review: "  Tight.  ",
-        spoiler: false,
-        visibility: "PUBLIC",
-        tags: "rewatch, noir, noir",
-      }),
-    ).toMatchObject({
+  it("builds a movie review payload without log tags", () => {
+    const payload = buildReviewPayload({
       type: "movie",
       movieId: "movie_1",
-      rating: 9,
+      rating: "8",
+      review: "  Tight.  ",
+      spoiler: false,
+      visibility: "PUBLIC",
+    });
+
+    expect(payload).toMatchObject({
+      type: "movie",
+      movieId: "movie_1",
+      rating: 8,
       review: "Tight.",
       spoiler: false,
       visibility: "PUBLIC",
-      tags: ["rewatch", "noir"],
     });
+    expect(payload).not.toHaveProperty("tags");
   });
 });

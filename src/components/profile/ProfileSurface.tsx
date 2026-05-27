@@ -16,12 +16,15 @@ import { EmptyState } from "@/components/primitives/StateViews";
 import { AppText } from "@/components/primitives/Text";
 import { ActivityCalendar } from "./ActivityCalendar";
 import { ProfilePins } from "./ProfilePins";
+import { SpoilerCard } from "@/components/reviews/SpoilerCard";
+import { shouldHideSpoilerText } from "@/components/reviews/spoiler-display";
 import {
   type ProfileLibrarySection,
   profileLibrarySectionCopy,
   selectProfileLibraryItems,
 } from "@/features/profile/library-sections";
 import { profileStatsForSummary } from "@/features/profile/profile-summary";
+import { formatStarsFromBackend } from "@/features/reviews/rating";
 import { initials } from "@/lib/format";
 import { useTheme } from "@/lib/theme";
 import type {
@@ -627,49 +630,82 @@ export function ProfileLogList({
   empty: string;
 }) {
   const theme = useTheme();
+  const [revealedLogs, setRevealedLogs] = useState<Set<string>>(
+    () => new Set(),
+  );
   if (!logs?.length) return <EmptyState title={empty} />;
   return (
     <View style={{ gap: theme.spacing.sm }}>
-      {logs.map((log, index) => (
-        <Pressable
-          key={`${log.id}-${log.createdAt ?? log.watchedAt ?? index}`}
-          accessibilityRole="button"
-          accessibilityLabel={`Open ${log.title ?? "review"}`}
-          onPress={() => router.push(`/log/${log.id}`)}
-          style={({ pressed }) => ({
-            flexDirection: "row",
-            gap: theme.spacing.md,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            borderRadius: theme.radius.md,
-            backgroundColor: theme.colors.surface,
-            padding: theme.spacing.md,
-            opacity: pressed ? 0.72 : 1,
-          })}
-        >
-          {log.posterUrl ? (
-            <Image
-              source={{ uri: log.posterUrl }}
-              style={{ width: 44, height: 64, borderRadius: theme.radius.sm }}
-              contentFit="cover"
-            />
-          ) : null}
-          <View style={{ flex: 1, gap: 3 }}>
-            <AppText variant="label" numberOfLines={1}>
-              {log.subtitle || log.title || "Untitled"}
-            </AppText>
-            <AppText variant="caption" muted numberOfLines={1}>
-              {formatDateText(log.watchedAt ?? log.createdAt)}
-              {log.rating ? ` · ${(log.rating / 2).toFixed(1)} / 5` : ""}
-            </AppText>
-            {log.body ? (
-              <AppText muted numberOfLines={2}>
-                {log.spoiler ? "Spoiler review" : log.body}
-              </AppText>
+      {logs.map((log, index) => {
+        const hidden = shouldHideSpoilerText({
+          spoiler: log.spoiler,
+          revealed: revealedLogs.has(log.id),
+        });
+        const ratingLabel = formatStarsFromBackend(log.rating);
+
+        return (
+          <View
+            key={`${log.id}-${log.createdAt ?? log.watchedAt ?? index}`}
+            style={{
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              borderRadius: theme.radius.md,
+              backgroundColor: theme.colors.surface,
+              padding: theme.spacing.md,
+              gap: theme.spacing.sm,
+            }}
+          >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Open ${log.title ?? "review"}`}
+              onPress={() => router.push(`/log/${log.id}`)}
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                gap: theme.spacing.md,
+                opacity: pressed ? 0.72 : 1,
+              })}
+            >
+              {log.posterUrl ? (
+                <Image
+                  source={{ uri: log.posterUrl }}
+                  style={{
+                    width: 44,
+                    height: 64,
+                    borderRadius: theme.radius.sm,
+                  }}
+                  contentFit="cover"
+                />
+              ) : null}
+              <View style={{ flex: 1, gap: 3 }}>
+                <AppText variant="label" numberOfLines={1}>
+                  {log.subtitle || log.title || "Untitled"}
+                </AppText>
+                <AppText variant="caption" muted numberOfLines={1}>
+                  {formatDateText(log.watchedAt ?? log.createdAt)}
+                  {ratingLabel ? ` · ${ratingLabel}` : ""}
+                </AppText>
+                {log.body && !hidden ? (
+                  <AppText muted numberOfLines={2}>
+                    {log.body}
+                  </AppText>
+                ) : null}
+              </View>
+            </Pressable>
+            {log.body && hidden ? (
+              <SpoilerCard
+                kind="review"
+                onReveal={() =>
+                  setRevealedLogs((current) => {
+                    const next = new Set(current);
+                    next.add(log.id);
+                    return next;
+                  })
+                }
+              />
             ) : null}
           </View>
-        </Pressable>
-      ))}
+        );
+      })}
     </View>
   );
 }

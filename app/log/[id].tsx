@@ -27,11 +27,15 @@ import {
   StarRatingDisplay,
   StarRatingInput,
 } from "@/components/reviews/StarRating";
+import { ReviewOptionsRow } from "@/components/reviews/ReviewOptionsRow";
+import { SpoilerCard } from "@/components/reviews/SpoilerCard";
+import { shouldHideSpoilerText } from "@/components/reviews/spoiler-display";
 import {
   backendRatingToStars,
   formatStarsFromBackend,
   starsToBackendRating,
 } from "@/features/reviews/rating";
+import type { Visibility } from "@/types/domain";
 
 export default function LogDetailScreen() {
   const theme = useTheme();
@@ -48,6 +52,7 @@ export default function LogDetailScreen() {
   const [editBody, setEditBody] = useState("");
   const [editRatingStars, setEditRatingStars] = useState<number | null>(null);
   const [editSpoiler, setEditSpoiler] = useState(false);
+  const [editVisibility, setEditVisibility] = useState<Visibility>("PRIVATE");
   const [commentBody, setCommentBody] = useState("");
   const [commentSpoiler, setCommentSpoiler] = useState(false);
   const [revealedComments, setRevealedComments] = useState<Set<string>>(
@@ -57,7 +62,10 @@ export default function LogDetailScreen() {
     id: string;
     label: string;
   } | null>(null);
-  const hiddenSpoiler = Boolean(log.data?.spoiler && !revealed);
+  const hiddenSpoiler = shouldHideSpoilerText({
+    spoiler: log.data?.spoiler,
+    revealed,
+  });
   return (
     <Screen
       back
@@ -112,19 +120,19 @@ export default function LogDetailScreen() {
               {log.data.rating ? (
                 <StarRatingDisplay rating={log.data.rating} />
               ) : null}
-              <AppText>
-                {hiddenSpoiler
-                  ? "Spoiler review."
-                  : log.data.body || "No text."}
-              </AppText>
+              {hiddenSpoiler ? (
+                <SpoilerCard kind="review" onReveal={() => setRevealed(true)} />
+              ) : (
+                <AppText>{log.data.body || "No text."}</AppText>
+              )}
             </View>
           </View>
-          {log.data.spoiler ? (
+          {log.data.spoiler && revealed ? (
             <Button
               variant="secondary"
               onPress={() => setRevealed((value) => !value)}
             >
-              {revealed ? "Hide Spoiler" : "Reveal Spoiler"}
+              Hide Spoiler
             </Button>
           ) : null}
           <View style={{ flexDirection: "row", gap: theme.spacing.sm }}>
@@ -153,6 +161,7 @@ export default function LogDetailScreen() {
                   setEditBody(log.data?.body ?? "");
                   setEditRatingStars(backendRatingToStars(log.data?.rating));
                   setEditSpoiler(Boolean(log.data?.spoiler));
+                  setEditVisibility(log.data?.visibility ?? "PRIVATE");
                   setEditOpen(true);
                 }}
               >
@@ -257,6 +266,7 @@ export default function LogDetailScreen() {
                             })
                           }
                           muted
+                          kind="reply"
                         />
                         <View
                           style={{
@@ -413,16 +423,12 @@ export default function LogDetailScreen() {
               textAlignVertical: "top",
             }}
           />
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <AppText>Spoiler</AppText>
-            <Switch value={editSpoiler} onValueChange={setEditSpoiler} />
-          </View>
+          <ReviewOptionsRow
+            visibility={editVisibility}
+            onVisibilityChange={setEditVisibility}
+            spoiler={editSpoiler}
+            onSpoilerChange={setEditSpoiler}
+          />
           {updateLog.isError || deleteLog.isError ? (
             <ErrorState
               message={updateLog.error?.message || deleteLog.error?.message}
@@ -436,6 +442,7 @@ export default function LogDetailScreen() {
                   rating: starsToBackendRating(editRatingStars),
                   review: editBody.trim() || null,
                   spoiler: editSpoiler,
+                  visibility: editVisibility,
                 },
                 { onSuccess: () => setEditOpen(false) },
               )
@@ -477,21 +484,16 @@ function CommentBody({
   revealed,
   onReveal,
   muted = false,
+  kind = "comment",
 }: {
   comment: { spoiler?: boolean; body?: string | null; title?: string | null };
   revealed: boolean;
   onReveal: () => void;
   muted?: boolean;
+  kind?: "comment" | "reply";
 }) {
-  if (comment.spoiler && !revealed) {
-    return (
-      <View style={{ gap: 6 }}>
-        <AppText muted={muted}>Spoiler comment.</AppText>
-        <Button variant="ghost" onPress={onReveal}>
-          Reveal
-        </Button>
-      </View>
-    );
+  if (shouldHideSpoilerText({ spoiler: comment.spoiler, revealed })) {
+    return <SpoilerCard kind={kind} onReveal={onReveal} />;
   }
   return (
     <AppText muted={muted}>

@@ -1,16 +1,5 @@
-import { useEffect, useMemo } from "react";
-import {
-  type GestureResponderEvent,
-  Pressable,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Star } from "lucide-react-native";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from "react-native-reanimated";
 import { AppText } from "@/components/primitives/Text";
 import { useTheme } from "@/lib/theme";
 import {
@@ -57,12 +46,6 @@ export function StarRatingInput({
 }) {
   const theme = useTheme();
   const currentValue = value ?? 0;
-  const width = useMemo(() => INPUT_STAR_SIZE * 5 + INPUT_STAR_GAP * 4, []);
-  const updateFromLocation = (event: GestureResponderEvent) => {
-    const x = Math.max(0, Math.min(width, event.nativeEvent.locationX));
-    const next = Math.max(0.5, Math.min(5, Math.ceil((x / width) * 10) / 2));
-    onChange(next);
-  };
 
   return (
     <View style={{ gap: theme.spacing.sm }}>
@@ -76,50 +59,54 @@ export function StarRatingInput({
       >
         <AppText variant="label">Rating</AppText>
         <AppText variant="caption" muted>
-          {value
-            ? `${Number.isInteger(value) ? value : value.toFixed(1)}/5`
-            : "Not rated"}
+          {value ? `${value}/5` : "Not rated"}
         </AppText>
       </View>
       <View
-        accessibilityRole="adjustable"
+        accessibilityRole="radiogroup"
         accessibilityLabel="Rating"
-        accessibilityValue={{
-          text: value
-            ? `${Number.isInteger(value) ? value : value.toFixed(1)} out of 5`
-            : "Not rated",
-        }}
-        onAccessibilityAction={(event) => {
-          if (event.nativeEvent.actionName === "increment") {
-            onChange(Math.min(5, (value ?? 0) + 0.5));
-          }
-          if (event.nativeEvent.actionName === "decrement") {
-            const next = Math.max(0, (value ?? 0) - 0.5);
-            onChange(next > 0 ? next : null);
-          }
-        }}
-        accessibilityActions={[
-          { name: "increment", label: "Increase rating" },
-          { name: "decrement", label: "Decrease rating" },
-        ]}
-        onStartShouldSetResponder={() => true}
-        onMoveShouldSetResponder={() => true}
-        onResponderGrant={updateFromLocation}
-        onResponderMove={updateFromLocation}
         style={{
-          width,
+          flexDirection: "row",
+          gap: INPUT_STAR_GAP,
           minHeight: 48,
-          justifyContent: "center",
+          alignItems: "center",
         }}
       >
-        <StarFillTrack
-          value={currentValue}
-          size={INPUT_STAR_SIZE}
-          gap={INPUT_STAR_GAP}
-          fillColor={theme.colors.accent}
-          emptyColor={theme.colors.faint}
-          animated
-        />
+        {Array.from({ length: 5 }).map((_, index) => {
+          const starValue = index + 1;
+          const active = currentValue >= starValue;
+          return (
+            <Pressable
+              key={starValue}
+              accessibilityRole="radio"
+              accessibilityLabel={`Set rating to ${starValue} out of 5`}
+              accessibilityState={{ checked: currentValue === starValue }}
+              hitSlop={8}
+              onPress={() =>
+                onChange(currentValue === starValue ? null : starValue)
+              }
+              style={({ pressed }) => ({
+                width: 42,
+                height: 42,
+                borderRadius: 21,
+                alignItems: "center",
+                justifyContent: "center",
+                opacity: pressed ? 0.7 : 1,
+                backgroundColor: active
+                  ? theme.colors.accentSoft
+                  : theme.colors.surfaceMuted,
+                transform: [{ scale: pressed ? 0.94 : 1 }],
+              })}
+            >
+              <Star
+                size={INPUT_STAR_SIZE}
+                color={active ? theme.colors.accent : theme.colors.faint}
+                fill={active ? theme.colors.accent : "transparent"}
+                strokeWidth={2}
+              />
+            </Pressable>
+          );
+        })}
       </View>
       {value ? (
         <Pressable
@@ -146,37 +133,27 @@ function StarFillTrack({
   gap,
   fillColor,
   emptyColor,
-  animated = false,
 }: {
   value: number;
   size: number;
   gap: number;
   fillColor: string;
   emptyColor: string;
-  animated?: boolean;
 }) {
-  const progress = useSharedValue(value);
   const width = size * 5 + gap * 4;
-
-  useEffect(() => {
-    progress.value = animated
-      ? withSpring(value, { damping: 18, stiffness: 220 })
-      : value;
-  }, [animated, progress, value]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    width: (Math.max(0, Math.min(5, progress.value)) / 5) * width,
-  }));
+  const filledStars = Math.max(0, Math.min(5, Math.round(value)));
+  const clippedWidth =
+    filledStars === 0 ? 0 : filledStars * size + (filledStars - 1) * gap;
 
   return (
     <View style={[styles.track, { width, height: size }]}>
       <StarRow size={size} gap={gap} color={emptyColor} fill="transparent" />
-      <Animated.View
+      <View
         pointerEvents="none"
-        style={[styles.fillClip, { height: size }, animatedStyle]}
+        style={[styles.fillClip, { height: size, width: clippedWidth }]}
       >
         <StarRow size={size} gap={gap} color={fillColor} fill={fillColor} />
-      </Animated.View>
+      </View>
     </View>
   );
 }

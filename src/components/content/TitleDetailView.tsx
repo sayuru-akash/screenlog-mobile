@@ -9,7 +9,6 @@ import {
   Play,
   Plus,
   RotateCcw,
-  Trash2,
   X,
 } from "lucide-react-native";
 import { useMemo, useState } from "react";
@@ -18,7 +17,6 @@ import {
   Linking,
   Modal,
   ScrollView,
-  Switch,
   TextInput,
   View,
 } from "react-native";
@@ -68,6 +66,8 @@ import {
   StarRatingDisplay,
   StarRatingInput,
 } from "@/components/reviews/StarRating";
+import { ReviewOptionsRow } from "@/components/reviews/ReviewOptionsRow";
+import { SpoilerCard } from "@/components/reviews/SpoilerCard";
 import {
   type ActionConfirmation,
   dropShowConfirmationCopy,
@@ -77,6 +77,7 @@ import {
   pinConfirmationCopy,
   removeWatchlistConfirmationCopy,
 } from "@/features/content/action-confirmations";
+import { getTitleMembershipAction } from "@/features/content/title-membership";
 
 export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
   const theme = useTheme();
@@ -102,6 +103,7 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
   );
   const data = title.data;
   const currentPinKey = `${type}:${id}`;
+  const membershipAction = data ? getTitleMembershipAction(data) : null;
   const profileHasPin = Boolean(
     profile.data?.pinned?.some((pin) => pin.type === type && pin.id === id),
   );
@@ -190,7 +192,6 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
       spoiler: false,
       rewatch: isRewatch,
       visibility,
-      tags: "",
     });
   };
 
@@ -357,22 +358,16 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                     flexWrap: "wrap",
                   }}
                 >
-                  {type === "movie" ? (
+                  {membershipAction ? (
                     <IconButton
-                      label={
-                        data.isWatched
-                          ? "Remove watched status"
-                          : data.status
-                            ? "Remove from watchlist"
-                            : "Add to watchlist"
-                      }
+                      label={membershipAction.label}
                       onPress={
-                        data.status || data.isWatched
+                        membershipAction.selected
                           ? confirmRemove
                           : addToWatchlist
                       }
                     >
-                      {data.status || data.isWatched ? (
+                      {membershipAction.selected ? (
                         <Check size={18} color={theme.colors.accent} />
                       ) : (
                         <Plus size={18} color={theme.colors.text} />
@@ -416,7 +411,7 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                       {!data.status
                         ? type === "movie"
                           ? "Mark Watched"
-                          : "Add to watchlist"
+                          : "Start Watching"
                         : type === "show"
                           ? nextEpisode?.episodeLabel
                             ? `Watch ${nextEpisode.episodeLabel}`
@@ -493,16 +488,6 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                 >
                   {isPinnedNow ? "Pinned" : "Pin"}
                 </Button>
-                {type === "movie" && data.status ? (
-                  <Button
-                    variant="danger"
-                    icon={<Trash2 size={15} color={theme.colors.danger} />}
-                    loading={remove.isPending}
-                    onPress={confirmRemove}
-                  >
-                    Remove
-                  </Button>
-                ) : null}
               </View>
               {type === "show" && data.status ? (
                 <View
@@ -556,13 +541,6 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                       Drop
                     </Button>
                   ) : null}
-                  <Button
-                    variant="danger"
-                    icon={<Trash2 size={15} color={theme.colors.danger} />}
-                    onPress={confirmRemove}
-                  >
-                    Remove
-                  </Button>
                 </View>
               ) : null}
             </View>
@@ -679,7 +657,6 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                                   spoiler: false,
                                   rewatch: false,
                                   visibility,
-                                  tags: "",
                                 });
                               }}
                             >
@@ -698,7 +675,6 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                                     spoiler: false,
                                     rewatch: true,
                                     visibility,
-                                    tags: "",
                                   })
                                 }
                               >
@@ -913,26 +889,12 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                   { minHeight: 140, textAlignVertical: "top" },
                 ]}
               />
-              <ToggleRow
-                label="Spoiler"
-                value={spoiler}
-                onValueChange={setSpoiler}
+              <ReviewOptionsRow
+                visibility={visibility}
+                onVisibilityChange={setVisibility}
+                spoiler={spoiler}
+                onSpoilerChange={setSpoiler}
               />
-              <View style={{ flexDirection: "row", gap: theme.spacing.sm }}>
-                {(["PRIVATE", "FOLLOWERS", "PUBLIC"] as const).map((option) => (
-                  <Button
-                    key={option}
-                    variant={visibility === option ? "primary" : "ghost"}
-                    onPress={() => setVisibility(option)}
-                  >
-                    {option === "PRIVATE"
-                      ? "Private"
-                      : option === "FOLLOWERS"
-                        ? "Followers"
-                        : "Public"}
-                  </Button>
-                ))}
-              </View>
               {review.isError ? (
                 <AppText style={{ color: theme.colors.danger }}>
                   {review.error.message}
@@ -954,7 +916,6 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                       spoiler,
                       rewatch: false,
                       visibility,
-                      tags: "",
                     },
                     {
                       onSuccess: () => {
@@ -1070,12 +1031,7 @@ function ReviewCard({
         {ratingLabel ? <StarRatingDisplay rating={review.rating} /> : null}
       </View>
       {hidden ? (
-        <View style={{ gap: theme.spacing.sm }}>
-          <AppText muted>Spoiler review.</AppText>
-          <Button variant="ghost" onPress={onReveal}>
-            Reveal
-          </Button>
-        </View>
+        <SpoilerCard kind="review" onReveal={onReveal} />
       ) : (
         <AppText muted={!review.body} numberOfLines={5}>
           {review.body || "Rated without a written review."}
@@ -1235,36 +1191,6 @@ function ListPickerRow({
           {addItem.error.message}
         </AppText>
       ) : null}
-    </View>
-  );
-}
-
-function ToggleRow({
-  label,
-  value,
-  onValueChange,
-}: {
-  label: string;
-  value: boolean;
-  onValueChange: (value: boolean) => void;
-}) {
-  const theme = useTheme();
-  return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        minHeight: 44,
-      }}
-    >
-      <AppText>{label}</AppText>
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        trackColor={{ true: theme.colors.accentSoft }}
-        thumbColor={value ? theme.colors.accent : undefined}
-      />
     </View>
   );
 }
