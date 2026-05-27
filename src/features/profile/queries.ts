@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { mapProfilePayload } from "@/lib/api-mappers";
 import { queryKeys } from "@/lib/query-keys";
 import { authedApiRequest } from "@/lib/use-api";
 import type { ProfilePayload } from "@/types/domain";
@@ -6,14 +7,16 @@ import type { ProfilePayload } from "@/types/domain";
 export function useProfileQuery() {
   return useQuery({
     queryKey: queryKeys.profile,
-    queryFn: () => authedApiRequest<ProfilePayload>("/profile"),
+    queryFn: async (): Promise<ProfilePayload> =>
+      mapProfilePayload(await authedApiRequest("/profile")),
   });
 }
 
 export function useUserProfileQuery(username: string) {
   return useQuery({
     queryKey: queryKeys.user(username),
-    queryFn: () => authedApiRequest<ProfilePayload>(`/users/${username}`),
+    queryFn: async (): Promise<ProfilePayload> =>
+      mapProfilePayload(await authedApiRequest(`/users/${username}`)),
   });
 }
 

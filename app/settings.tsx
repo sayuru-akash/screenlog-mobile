@@ -19,7 +19,14 @@ import type {
   NotificationSettingsPayload,
   ProviderSettingsPayload,
   SettingsPayload,
+  Visibility,
 } from "@/types/domain";
+
+const visibilityOptions: Array<{ label: string; value: Visibility }> = [
+  { label: "Private", value: "PRIVATE" },
+  { label: "Followers", value: "FOLLOWERS" },
+  { label: "Public", value: "PUBLIC" },
+];
 
 export default function SettingsScreen() {
   const theme = useTheme();
@@ -86,6 +93,13 @@ export default function SettingsScreen() {
           value={mergedDraft.bio ?? ""}
           onChangeText={(bio) => setDraft((value) => ({ ...value, bio }))}
         />
+        <VisibilityPicker
+          label="Profile visibility"
+          value={mergedDraft.profileVisibility ?? "PRIVATE"}
+          onChange={(profileVisibility) =>
+            setDraft((value) => ({ ...value, profileVisibility }))
+          }
+        />
       </Section>
       <Section title="Region">
         <Input
@@ -121,6 +135,22 @@ export default function SettingsScreen() {
             }
           />
         </View>
+      </Section>
+      <Section title="Defaults">
+        <VisibilityPicker
+          label="Logs"
+          value={mergedDraft.defaultLogVisibility ?? "PRIVATE"}
+          onChange={(defaultLogVisibility) =>
+            setDraft((value) => ({ ...value, defaultLogVisibility }))
+          }
+        />
+        <VisibilityPicker
+          label="Lists"
+          value={mergedDraft.defaultListVisibility ?? "PRIVATE"}
+          onChange={(defaultListVisibility) =>
+            setDraft((value) => ({ ...value, defaultListVisibility }))
+          }
+        />
       </Section>
       {save.isError ? (
         <AppText style={{ color: theme.colors.danger }}>
@@ -254,6 +284,35 @@ export default function SettingsScreen() {
         )}
       </Section>
     </Screen>
+  );
+}
+
+function VisibilityPicker({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: Visibility;
+  onChange: (value: Visibility) => void;
+}) {
+  const theme = useTheme();
+  return (
+    <View style={{ gap: theme.spacing.xs }}>
+      <AppText variant="label">{label}</AppText>
+      <View style={{ flexDirection: "row", gap: theme.spacing.sm }}>
+        {visibilityOptions.map((option) => (
+          <View key={option.value} style={{ flex: 1 }}>
+            <Button
+              variant={value === option.value ? "secondary" : "ghost"}
+              onPress={() => onChange(option.value)}
+            >
+              {option.label}
+            </Button>
+          </View>
+        ))}
+      </View>
+    </View>
   );
 }
 

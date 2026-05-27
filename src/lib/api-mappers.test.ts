@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   mapCalendarPayload,
+  mapFeedPayload,
+  mapHomePayload,
   mapListDetailPayload,
   mapLogPayload,
+  mapProfilePayload,
+  mapSettingsPayload,
   mapTitleDetailPayload,
   mapUpNextPayload,
   mapWatchlistPayload,
@@ -122,6 +126,48 @@ describe("mapUpNextPayload", () => {
   });
 });
 
+describe("mapHomePayload", () => {
+  it("derives favourites from the home watchlist while preserving up-next data", () => {
+    expect(
+      mapHomePayload({
+        watchlist: {
+          shows: [
+            {
+              showId: "show-1",
+              isFavourite: true,
+              status: "WATCHING",
+              show: { id: "show-1", title: "Severance" },
+            },
+            {
+              showId: "show-2",
+              isFavourite: false,
+              show: { id: "show-2", title: "Dark" },
+            },
+          ],
+          movies: [
+            {
+              movieId: "movie-1",
+              isFavourite: true,
+              movie: { id: "movie-1", title: "Heat" },
+            },
+          ],
+        },
+        upNext: {
+          primary: { id: "show-1", kind: "show", title: "Severance" },
+          items: [{ id: "movie-1", kind: "movie", title: "Heat" }],
+        },
+      }),
+    ).toMatchObject({
+      upNext: { id: "show-1", title: "Severance" },
+      continueWatching: [{ id: "movie-1", title: "Heat" }],
+      favourites: [
+        { id: "show-1", type: "show", title: "Severance" },
+        { id: "movie-1", type: "movie", title: "Heat" },
+      ],
+    });
+  });
+});
+
 describe("mapCalendarPayload", () => {
   it("flattens grouped backend calendar payloads while keeping episode ids actionable", () => {
     expect(
@@ -226,6 +272,131 @@ describe("list and log wrappers", () => {
       id: "log-1",
       body: "Great",
       rating: 9,
+    });
+  });
+});
+
+describe("mapProfilePayload", () => {
+  it("maps backend pins and keeps stats render-safe for React Native text", () => {
+    expect(
+      mapProfilePayload({
+        user: {
+          id: "user-1",
+          name: "Ada",
+          username: "ada",
+          image: "https://cdn.example/ada.jpg",
+        },
+        stats: {
+          showsTracked: 4,
+          topGenres: [
+            { name: "Drama", count: 3 },
+            { name: "Comedy", count: 2 },
+          ],
+        },
+        calendar: [{ date: "2026-05-27", total: 1, parts: ["1 episode"] }],
+        pins: [
+          {
+            type: "SHOW",
+            showId: "show-1",
+            show: { id: "show-1", title: "Silo", posterPath: "/silo.jpg" },
+          },
+          {
+            type: "MOVIE",
+            movieId: "movie-1",
+            movie: { id: "movie-1", title: "Heat" },
+          },
+        ],
+      }),
+    ).toMatchObject({
+      user: {
+        id: "user-1",
+        username: "ada",
+        avatarUrl: "https://cdn.example/ada.jpg",
+      },
+      stats: {
+        showsTracked: 4,
+        topGenres: "Drama, Comedy",
+      },
+      calendar: [{ date: "2026-05-27", total: 1 }],
+      pinned: [
+        { id: "show-1", type: "show", title: "Silo" },
+        { id: "movie-1", type: "movie", title: "Heat" },
+      ],
+    });
+  });
+});
+
+describe("mapSettingsPayload", () => {
+  it("merges user and preference settings into safe mobile scalars", () => {
+    expect(
+      mapSettingsPayload({
+        user: {
+          username: "ada",
+          bio: null,
+          profileVisibility: "PUBLIC",
+        },
+        preferences: {
+          region: 42,
+          timezone: "Europe/London",
+          theme: "dark",
+          defaultLogVisibility: "FOLLOWERS",
+          defaultListVisibility: "PRIVATE",
+        },
+      }),
+    ).toEqual({
+      preferences: {
+        username: "ada",
+        bio: "",
+        profileVisibility: "PUBLIC",
+        region: "US",
+        language: null,
+        timezone: "Europe/London",
+        theme: "dark",
+        defaultLogVisibility: "FOLLOWERS",
+        defaultListVisibility: "PRIVATE",
+      },
+    });
+  });
+});
+
+describe("mapFeedPayload", () => {
+  it("normalizes raw feed logs and lists into navigable activity rows", () => {
+    expect(
+      mapFeedPayload({
+        items: [
+          {
+            type: "log",
+            log: {
+              id: "log-1",
+              review: "Great",
+              user: { name: "Ada", username: "ada", image: "/ada.jpg" },
+              show: { title: "Silo" },
+            },
+          },
+          {
+            type: "list",
+            list: {
+              id: "list-1",
+              title: "Weekend",
+              user: { username: "grace" },
+            },
+          },
+        ],
+      }),
+    ).toMatchObject({
+      items: [
+        {
+          id: "log-1",
+          text: "Ada reviewed Silo",
+          href: "/log/log-1",
+          user: { username: "ada" },
+        },
+        {
+          id: "list-1",
+          text: "grace updated Weekend",
+          href: "/list/list-1",
+        },
+      ],
     });
   });
 });

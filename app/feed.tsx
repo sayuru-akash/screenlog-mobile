@@ -1,4 +1,7 @@
+import { router } from "expo-router";
+import type { Href } from "expo-router";
 import { View } from "react-native";
+import { Button } from "@/components/primitives/Button";
 import { Screen } from "@/components/primitives/Screen";
 import {
   EmptyState,
@@ -7,6 +10,7 @@ import {
 } from "@/components/primitives/StateViews";
 import { AppText } from "@/components/primitives/Text";
 import { useFeedQuery } from "@/features/feed/queries";
+import { mobileRouteFromHref } from "@/lib/api-mappers";
 import { useTheme } from "@/lib/theme";
 
 export default function FeedScreen() {
@@ -26,9 +30,22 @@ export default function FeedScreen() {
         <EmptyState title="No feed activity" />
       ) : null}
       <View style={{ gap: theme.spacing.md }}>
-        {items.map((item) => (
-          <AppText key={item.id}>{item.text}</AppText>
-        ))}
+        {items.map((item) => {
+          const route = mobileRouteFromHref(item.href);
+          return (
+            <View key={item.id} style={{ gap: theme.spacing.xs }}>
+              <AppText>{item.text}</AppText>
+              {route ? (
+                <Button
+                  variant="ghost"
+                  onPress={() => router.push(route as Href)}
+                >
+                  Open
+                </Button>
+              ) : null}
+            </View>
+          );
+        })}
       </View>
     </Screen>
   );

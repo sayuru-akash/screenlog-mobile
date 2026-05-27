@@ -1,4 +1,5 @@
 import type {
+  ActivityItem,
   CalendarItem,
   CustomListDetail,
   CustomListSummary,
@@ -6,8 +7,12 @@ import type {
   MediaType,
   NotificationItem,
   ProviderSummary,
+  ProfileCalendarDay,
+  ProfilePayload,
   ReviewSummary,
   SearchResult,
+  SettingsPayload,
+  ThemePreference,
   TitleSummary,
   Visibility,
   WatchlistPayload,
@@ -60,6 +65,24 @@ export function mapUpNextPayload(payload: unknown): HomePayload {
     continueWatching,
     favourites: [],
     activity: [],
+  };
+}
+
+export function mapHomePayload(payload: unknown): HomePayload {
+  const raw = asRecord(payload);
+  const upNext = mapUpNextPayload(raw.upNext ?? raw);
+  const watchlist = mapWatchlistPayload(raw.watchlist);
+  const favourites = [
+    ...(watchlist.shows ?? []),
+    ...(watchlist.movies ?? []),
+  ].filter((item) => item.isFavourite);
+
+  return {
+    ...upNext,
+    favourites,
+    activity: asArray(raw.activity)
+      .map(normalizeActivityItem)
+      .filter(Boolean) as HomePayload["activity"],
   };
 }
 
@@ -209,6 +232,79 @@ export function mapNotificationsPayload(payload: unknown): {
   };
 }
 
+export function mapFeedPayload(payload: unknown): { items?: ActivityItem[] } {
+  const raw = asRecord(payload);
+  return {
+    items: asArray(raw.items)
+      .map(normalizeFeedItem)
+      .filter(Boolean) as ActivityItem[],
+  };
+}
+
+export function mapProfilePayload(payload: unknown): ProfilePayload {
+  const raw = asRecord(payload);
+  const user = asRecord(raw.user);
+  const stats = normalizeStats(raw.stats);
+  const followerCount = numberOrUndefined(
+    user.followerCount ?? stats.followerCount,
+  );
+  const followingCount = numberOrUndefined(
+    user.followingCount ?? stats.followingCount,
+  );
+
+  return {
+    user: {
+      id: nullableString(user.id) ?? undefined,
+      name: nullableString(user.name),
+      username: nullableString(user.username),
+      bio: nullableString(user.bio),
+      avatarUrl: tmdbImageUrl(user.avatarUrl ?? user.image),
+      followerCount,
+      followingCount,
+    },
+    calendar: asArray(raw.calendar)
+      .map(normalizeProfileCalendarDay)
+      .filter(Boolean) as ProfileCalendarDay[],
+    stats,
+    lists: asArray(raw.lists)
+      .map(normalizeListSummary)
+      .filter(Boolean) as ProfilePayload["lists"],
+    reviews: asArray(raw.reviews)
+      .map(normalizeLog)
+      .filter(Boolean) as ProfilePayload["reviews"],
+    pinned: asArray(raw.pinned ?? raw.pins)
+      .map(normalizeProfilePin)
+      .filter(Boolean) as ProfilePayload["pinned"],
+    isFollowing: Boolean(raw.isFollowing ?? raw.following),
+  };
+}
+
+export function mapSettingsPayload(payload: unknown): {
+  preferences?: SettingsPayload;
+} {
+  const raw = asRecord(payload);
+  const preferences = asRecord(raw.preferences);
+  const user = asRecord(raw.user);
+
+  return {
+    preferences: {
+      username: stringOrEmpty(user.username ?? preferences.username),
+      bio: stringOrEmpty(user.bio ?? preferences.bio),
+      profileVisibility: normalizeVisibility(
+        user.profileVisibility ?? preferences.profileVisibility,
+      ),
+      theme: normalizeTheme(preferences.theme),
+      region: regionCode(preferences.region),
+      language: nullableString(preferences.language),
+      timezone: stringValue(preferences.timezone, "Asia/Colombo"),
+      defaultLogVisibility:
+        normalizeVisibility(preferences.defaultLogVisibility) ?? "PRIVATE",
+      defaultListVisibility:
+        normalizeVisibility(preferences.defaultListVisibility) ?? "PRIVATE",
+    },
+  };
+}
+
 export function mobileRouteFromHref(href: unknown) {
   if (typeof href !== "string") return null;
   const value = href.trim();
@@ -245,6 +341,81 @@ function normalizeWatchlistRow(
     type === "show" ? (row.showId ?? source.id) : (row.movieId ?? source.id);
   if (!id) return null;
   return normalizeTitleLike({ ...source, id }, type, row);
+}
+
+function normalizeActivityItem(item: unknown) {
+  const raw = asRecord(item);
+  const id = stringValue(raw.id);
+  if (!id) return null;
+  const user = asRecord(raw.user);
+  return {
+    id,
+    text: stringValue(raw.text ?? raw.summary ?? raw.title, "Activity"),
+    href: nullableString(raw.href) ?? undefined,
+    user: {
+      name: nullableString(user.name),
+      username: nullableString(user.username),
+      avatarUrl: tmdbImageUrl(user.avatarUrl ?? user.image),
+    },
+  };
+}
+
+function normalizeFeedItem(item: unknown): ActivityItem | null {
+  const raw = asRecord(item);
+  const type = nullableString(raw.type);
+
+  if (type === "log") {
+    const log = asRecord(raw.log);
+    const id = stringValue(log.id ?? raw.id);
+    if (!id) return null;
+    const user = normalizeActivityUser(log.user);
+    const title = feedTitle(log);
+    return {
+      id,
+      text: `${user.name ?? user.username ?? "Someone"} reviewed ${title}`,
+      href: `/log/${id}`,
+      user,
+    };
+  }
+
+  if (type === "list") {
+    const list = asRecord(raw.list);
+    const id = stringValue(list.id ?? raw.id);
+    if (!id) return null;
+    const user = normalizeActivityUser(list.user);
+    return {
+      id,
+      text: `${user.name ?? user.username ?? "Someone"} updated ${stringValue(
+        list.title,
+        "a list",
+      )}`,
+      href: `/list/${id}`,
+      user,
+    };
+  }
+
+  return normalizeActivityItem(item);
+}
+
+function normalizeActivityUser(
+  input: unknown,
+): NonNullable<ActivityItem["user"]> {
+  const user = asRecord(input);
+  return {
+    name: nullableString(user.name),
+    username: nullableString(user.username),
+    avatarUrl: tmdbImageUrl(user.avatarUrl ?? user.image),
+  };
+}
+
+function feedTitle(log: AnyRecord) {
+  const show = asRecord(log.show);
+  const movie = asRecord(log.movie);
+  const episode = asRecord(log.episode);
+  return stringValue(
+    log.title ?? show.title ?? movie.title ?? episode.name,
+    "a title",
+  );
 }
 
 function normalizeUpNextItem(item: unknown): TitleSummary | null {
@@ -415,6 +586,69 @@ function normalizeListItem(item: unknown) {
   };
 }
 
+function normalizeProfilePin(item: unknown): TitleSummary | null {
+  const raw = asRecord(item);
+  const log = asRecord(raw.log);
+  const typeText = nullableString(raw.type)?.toUpperCase();
+  const showSource = asRecord(raw.show ?? log.show);
+  const movieSource = asRecord(raw.movie ?? log.movie);
+
+  if (typeText === "SHOW" || raw.showId || showSource.id) {
+    const id = raw.showId ?? showSource.id;
+    if (!id) return null;
+    return normalizeTitleLike({ ...showSource, id }, "show");
+  }
+
+  if (typeText === "MOVIE" || raw.movieId || movieSource.id) {
+    const id = raw.movieId ?? movieSource.id;
+    if (!id) return null;
+    return normalizeTitleLike({ ...movieSource, id }, "movie");
+  }
+
+  return null;
+}
+
+function normalizeProfileCalendarDay(item: unknown): ProfileCalendarDay | null {
+  const raw = asRecord(item);
+  const date = nullableString(raw.date);
+  if (!date) return null;
+  return {
+    date,
+    total: numberOrUndefined(raw.total ?? raw.count) ?? 0,
+    parts: asArray(raw.parts).map(String),
+    appOpened: Boolean(raw.appOpened),
+  };
+}
+
+function normalizeStats(input: unknown): NonNullable<ProfilePayload["stats"]> {
+  const raw = asRecord(input);
+  const stats: NonNullable<ProfilePayload["stats"]> = {};
+
+  for (const [key, value] of Object.entries(raw)) {
+    if (
+      value === null ||
+      typeof value === "string" ||
+      typeof value === "number"
+    ) {
+      stats[key] = value;
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      const labels = value
+        .map((item) => {
+          if (typeof item === "string" || typeof item === "number")
+            return String(item);
+          return nullableString(asRecord(item).name);
+        })
+        .filter(Boolean);
+      if (labels.length) stats[key] = labels.join(", ");
+    }
+  }
+
+  return stats;
+}
+
 function normalizeLog(item: unknown): ReviewSummary | null {
   const raw = asRecord(item);
   if (!raw.id) return null;
@@ -485,6 +719,12 @@ function normalizeVisibility(value: unknown): Visibility | undefined {
     : undefined;
 }
 
+function normalizeTheme(value: unknown): ThemePreference {
+  return value === "light" || value === "dark" || value === "system"
+    ? value
+    : "system";
+}
+
 function asRecord(value: unknown): AnyRecord {
   return typeof value === "object" && value !== null
     ? (value as AnyRecord)
@@ -503,6 +743,16 @@ function stringValue(value: unknown, fallback = "") {
   if (typeof value === "string" && value.trim()) return value;
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return fallback;
+}
+
+function stringOrEmpty(value: unknown) {
+  return typeof value === "string" ? value : "";
+}
+
+function regionCode(value: unknown) {
+  return typeof value === "string" && /^[A-Za-z]{2}$/.test(value)
+    ? value.toUpperCase()
+    : "US";
 }
 
 function numberOrUndefined(value: unknown) {

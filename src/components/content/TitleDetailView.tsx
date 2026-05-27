@@ -2,6 +2,7 @@ import { Alert, Linking, View } from "react-native";
 import { useState } from "react";
 import { Modal, Switch, TextInput } from "react-native";
 import { Image } from "expo-image";
+import { router } from "expo-router";
 import { Heart, Pin, Play, Trash2, X } from "lucide-react-native";
 import { Button } from "@/components/primitives/Button";
 import { Screen } from "@/components/primitives/Screen";
@@ -333,11 +334,19 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
             {data.reviews?.length ? (
               <View style={{ gap: theme.spacing.md }}>
                 {data.reviews.slice(0, 3).map((review) => (
-                  <AppText key={review.id}>
-                    {review.spoiler
-                      ? "Spoiler review"
-                      : review.body || review.title}
-                  </AppText>
+                  <View key={review.id} style={{ gap: theme.spacing.xs }}>
+                    <AppText>
+                      {review.spoiler
+                        ? "Spoiler review"
+                        : review.body || review.title}
+                    </AppText>
+                    <Button
+                      variant="ghost"
+                      onPress={() => router.push(`/log/${review.id}`)}
+                    >
+                      Open
+                    </Button>
+                  </View>
                 ))}
               </View>
             ) : (

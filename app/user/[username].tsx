@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
 import { Button } from "@/components/primitives/Button";
 import { Screen } from "@/components/primitives/Screen";
@@ -40,14 +40,44 @@ export default function UserProfileScreen() {
           <Button loading={follow.isPending} onPress={() => follow.mutate()}>
             {profile.data.isFollowing ? "Unfollow" : "Follow"}
           </Button>
+          {follow.isError ? (
+            <AppText style={{ color: theme.colors.danger }}>
+              {follow.error.message}
+            </AppText>
+          ) : null}
           <Section title="Activity">
             <ActivityCalendar days={profile.data.calendar} />
+          </Section>
+          <Section title="Reviews">
+            {profile.data.reviews?.length ? (
+              <View style={{ gap: theme.spacing.sm }}>
+                {profile.data.reviews.map((review) => (
+                  <Button
+                    key={review.id}
+                    variant="ghost"
+                    onPress={() => router.push(`/log/${review.id}`)}
+                  >
+                    {review.spoiler
+                      ? "Spoiler review"
+                      : review.title || review.body || "Review"}
+                  </Button>
+                ))}
+              </View>
+            ) : (
+              <EmptyState title="No visible reviews" />
+            )}
           </Section>
           <Section title="Lists">
             {profile.data.lists?.length ? (
               <View style={{ gap: theme.spacing.sm }}>
                 {profile.data.lists.map((list) => (
-                  <AppText key={list.id}>{list.title}</AppText>
+                  <Button
+                    key={list.id}
+                    variant="ghost"
+                    onPress={() => router.push(`/list/${list.id}`)}
+                  >
+                    {list.title}
+                  </Button>
                 ))}
               </View>
             ) : (

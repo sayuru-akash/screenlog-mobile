@@ -1,7 +1,12 @@
+import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { AppText } from "@/components/primitives/Text";
 import { useTheme } from "@/lib/theme";
 import type { ProfileCalendarDay } from "@/types/domain";
+import {
+  activityDayLabel,
+  visibleActivityDays,
+} from "./activity-calendar-utils";
 
 export function ActivityCalendar({
   days = [],
@@ -9,7 +14,10 @@ export function ActivityCalendar({
   days?: ProfileCalendarDay[];
 }) {
   const theme = useTheme();
-  const latest = days.slice(-84);
+  const latest = visibleActivityDays(days);
+  const [selected, setSelected] = useState<ProfileCalendarDay | null>(
+    latest.at(-1) ?? null,
+  );
   const max = Math.max(1, ...latest.map((day) => day.total));
   return (
     <View style={{ gap: theme.spacing.md }}>
@@ -27,10 +35,12 @@ export function ActivityCalendar({
           return (
             <Pressable
               key={day.date}
-              accessibilityLabel={`${day.date}: ${day.parts?.join(", ") || "Active on Watchlog"}`}
+              accessibilityRole="button"
+              accessibilityLabel={activityDayLabel(day)}
+              onPress={() => setSelected(day)}
               style={{
-                width: 14,
-                height: 14,
+                width: 11,
+                height: 11,
                 borderRadius: 3,
                 backgroundColor,
               }}
@@ -39,7 +49,7 @@ export function ActivityCalendar({
         })}
       </View>
       <AppText variant="caption" muted>
-        Tap a day for activity details.
+        {selected ? activityDayLabel(selected) : "No activity yet."}
       </AppText>
     </View>
   );

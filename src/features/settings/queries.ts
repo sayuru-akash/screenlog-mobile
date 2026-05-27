@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { mapSettingsPayload } from "@/lib/api-mappers";
 import { queryKeys } from "@/lib/query-keys";
 import { authedApiRequest } from "@/lib/use-api";
 import type {
@@ -10,8 +11,8 @@ import type {
 export function useSettingsQuery() {
   return useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () =>
-      authedApiRequest<{ preferences?: SettingsPayload }>("/settings"),
+    queryFn: async (): Promise<{ preferences?: SettingsPayload }> =>
+      mapSettingsPayload(await authedApiRequest("/settings")),
   });
 }
 

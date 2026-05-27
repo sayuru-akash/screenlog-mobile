@@ -73,28 +73,36 @@ export default function LogDetailScreen() {
             <Button
               variant="secondary"
               loading={reaction.isPending}
-              onPress={() => reaction.mutate(1)}
+              onPress={() =>
+                reaction.mutate(log.data.userReaction === 1 ? 0 : 1)
+              }
             >
-              Upvote
+              Up {log.data.reactionScore ?? 0}
             </Button>
             <Button
               variant="ghost"
               loading={reaction.isPending}
-              onPress={() => reaction.mutate(-1)}
+              onPress={() =>
+                reaction.mutate(log.data.userReaction === -1 ? 0 : -1)
+              }
             >
               Downvote
             </Button>
-            <Button
-              variant="ghost"
-              onPress={() => {
-                setEditBody(log.data?.body ?? "");
-                setEditRating(log.data?.rating ? String(log.data.rating) : "");
-                setEditSpoiler(Boolean(log.data?.spoiler));
-                setEditOpen(true);
-              }}
-            >
-              Edit
-            </Button>
+            {log.data.canEdit ? (
+              <Button
+                variant="ghost"
+                onPress={() => {
+                  setEditBody(log.data?.body ?? "");
+                  setEditRating(
+                    log.data?.rating ? String(log.data.rating) : "",
+                  );
+                  setEditSpoiler(Boolean(log.data?.spoiler));
+                  setEditOpen(true);
+                }}
+              >
+                Edit
+              </Button>
+            ) : null}
           </View>
         </>
       ) : null}

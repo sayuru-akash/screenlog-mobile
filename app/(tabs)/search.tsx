@@ -27,6 +27,8 @@ export default function SearchScreen() {
   const add = useAddToWatchlistMutation();
   const lookup = useLookupTitleMutation();
   const results = search.data?.results ?? [];
+  const [addingKey, setAddingKey] = useState<string | null>(null);
+  const [addedKeys, setAddedKeys] = useState<Set<string>>(new Set());
 
   return (
     <Screen
@@ -80,38 +82,49 @@ export default function SearchScreen() {
         <EmptyState title="No matches" />
       ) : null}
       <View style={{ gap: theme.spacing.md }}>
-        {results.map((item) => (
-          <TitleRow
-            key={`${item.type}-${item.id || item.tmdbId}`}
-            item={item}
-            onPress={() => {
-              if (!item.tmdbId) {
-                router.push(`/${item.type}/${item.id}`);
-                return;
-              }
-              lookup.mutate(item, {
-                onSuccess: (payload) =>
-                  router.push(`/${payload.type}/${payload.id}`),
-              });
-            }}
-            right={
-              <Button
-                variant="secondary"
-                loading={add.isPending}
-                onPress={() => add.mutate(item)}
-                icon={
-                  add.isSuccess ? (
-                    <Check size={15} color={theme.colors.accent} />
-                  ) : (
-                    <Plus size={15} color={theme.colors.accent} />
-                  )
+        {results.map((item) => {
+          const key = `${item.type}-${item.id || item.tmdbId}`;
+          const added = addedKeys.has(key);
+          return (
+            <TitleRow
+              key={key}
+              item={item}
+              onPress={() => {
+                if (!item.tmdbId) {
+                  router.push(`/${item.type}/${item.id}`);
+                  return;
                 }
-              >
-                Add
-              </Button>
-            }
-          />
-        ))}
+                lookup.mutate(item, {
+                  onSuccess: (payload) =>
+                    router.push(`/${payload.type}/${payload.id}`),
+                });
+              }}
+              right={
+                <Button
+                  variant="secondary"
+                  loading={add.isPending && addingKey === key}
+                  onPress={() => {
+                    setAddingKey(key);
+                    add.mutate(item, {
+                      onSuccess: () =>
+                        setAddedKeys((values) => new Set(values).add(key)),
+                      onSettled: () => setAddingKey(null),
+                    });
+                  }}
+                  icon={
+                    added ? (
+                      <Check size={15} color={theme.colors.accent} />
+                    ) : (
+                      <Plus size={15} color={theme.colors.accent} />
+                    )
+                  }
+                >
+                  {added ? "Added" : "Add"}
+                </Button>
+              }
+            />
+          );
+        })}
       </View>
       {add.isError || lookup.isError ? (
         <AppText style={{ color: theme.colors.danger }}>
