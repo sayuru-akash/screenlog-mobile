@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import { Pressable, View } from "react-native";
 import { Button } from "@/components/primitives/Button";
 import { Screen } from "@/components/primitives/Screen";
@@ -56,7 +56,7 @@ export default function NotificationsScreen() {
             onPress={() => {
               if (!item.read) markRead.mutate([item.id]);
               const route = mobileRouteFromHref(item.href);
-              if (route) router.push(route);
+              if (route) router.push(route as Href);
             }}
             style={({ pressed }) => ({
               gap: 3,

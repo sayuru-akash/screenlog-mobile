@@ -29,6 +29,7 @@ export default function HomeScreen() {
   );
   const watchlistUpdate = useWatchlistUpdateMutation();
   const data = home.data;
+  const upNext = data?.upNext;
   return (
     <Screen
       title="Watchlog"
@@ -51,13 +52,11 @@ export default function HomeScreen() {
       ) : null}
       {!home.isLoading && !home.isError ? (
         <>
-          {data?.upNext ? (
+          {upNext ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Open ${data.upNext.title}`}
-              onPress={() =>
-                router.push(`/${data.upNext?.type}/${data.upNext?.id}`)
-              }
+              accessibilityLabel={`Open ${upNext.title}`}
+              onPress={() => router.push(`/${upNext.type}/${upNext.id}`)}
               style={({ pressed }) => ({
                 borderRadius: theme.radius.md,
                 overflow: "hidden",
@@ -68,13 +67,10 @@ export default function HomeScreen() {
               })}
             >
               <View style={{ minHeight: 260 }}>
-                {data.upNext.backdropUrl || data.upNext.posterUrl ? (
+                {upNext.backdropUrl || upNext.posterUrl ? (
                   <Image
                     source={{
-                      uri:
-                        data.upNext.backdropUrl ||
-                        data.upNext.posterUrl ||
-                        undefined,
+                      uri: upNext.backdropUrl || upNext.posterUrl || undefined,
                     }}
                     style={{ position: "absolute", inset: 0 }}
                     contentFit="cover"
@@ -95,10 +91,10 @@ export default function HomeScreen() {
                   <AppText variant="caption" muted>
                     Up Next
                   </AppText>
-                  <AppText variant="heading">{data.upNext.title}</AppText>
+                  <AppText variant="heading">{upNext.title}</AppText>
                   <AppText muted>
-                    {data.upNext.nextLabel ||
-                      data.upNext.progressLabel ||
+                    {upNext.nextLabel ||
+                      upNext.progressLabel ||
                       "Ready when you are."}
                   </AppText>
                   <View
@@ -110,22 +106,16 @@ export default function HomeScreen() {
                   >
                     <Button
                       loading={progress.isPending || watchlistUpdate.isPending}
-                      disabled={
-                        data.upNext.type === "show" &&
-                        !data.upNext.nextEpisodeId
-                      }
+                      disabled={upNext.type === "show" && !upNext.nextEpisodeId}
                       onPress={() => {
-                        if (
-                          data.upNext?.type === "show" &&
-                          data.upNext.nextEpisodeId
-                        ) {
+                        if (upNext.type === "show" && upNext.nextEpisodeId) {
                           progress.mutate({
                             action: "watch",
-                            episodeId: data.upNext.nextEpisodeId,
+                            episodeId: upNext.nextEpisodeId,
                           });
-                        } else if (data.upNext?.type === "movie") {
+                        } else if (upNext.type === "movie") {
                           watchlistUpdate.mutate({
-                            ...titleToWatchlistInput(data.upNext),
+                            ...titleToWatchlistInput(upNext),
                             userStatus: "WATCHED",
                           });
                         }

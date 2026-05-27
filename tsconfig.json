@@ -11,6 +11,13 @@
     },
     "types": ["vitest/globals"]
   },
-  "include": ["app", "src", "vitest.config.ts", "eslint.config.js"],
+  "include": [
+    "app",
+    "src",
+    "vitest.config.ts",
+    "eslint.config.js",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ],
   "exclude": ["node_modules"]
 }

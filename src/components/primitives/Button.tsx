@@ -54,7 +54,7 @@ export function Button({
       accessibilityRole="button"
       disabled={isDisabled}
       {...props}
-      style={({ pressed }) => [
+      style={(state) => [
         {
           minHeight: 44,
           borderRadius: theme.radius.sm,
@@ -64,11 +64,11 @@ export function Button({
           justifyContent: "center",
           flexDirection: "row",
           gap: theme.spacing.sm,
-          opacity: isDisabled ? 0.45 : pressed ? 0.72 : 1,
+          opacity: isDisabled ? 0.45 : state.pressed ? 0.72 : 1,
           backgroundColor: colors.backgroundColor,
           borderColor: colors.borderColor,
         },
-        typeof style === "function" ? style({ pressed }) : style,
+        typeof style === "function" ? style(state) : style,
       ]}
     >
       {loading ? <ActivityIndicator color={colors.color} /> : null}
