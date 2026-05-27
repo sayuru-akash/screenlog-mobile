@@ -6,6 +6,7 @@ import type {
   HomePayload,
   MediaType,
   NotificationItem,
+  ProfilePin,
   ProviderSummary,
   ProfileCalendarDay,
   ProfilePayload,
@@ -106,6 +107,38 @@ export function mapCalendarPayload(payload: unknown): {
       .filter(Boolean),
   ) as CalendarItem[];
   return { items };
+}
+
+export function mapDiscoverPayload(payload: unknown): {
+  rows?: Array<{ id: string; title: string; items: TitleSummary[] }>;
+} {
+  const raw = asRecord(payload);
+  const buckets: Array<[string, string, MediaType, unknown]> = [
+    ["trending-shows", "Trending Shows", "show", raw.trendingShows],
+    ["trending-movies", "Trending Movies", "movie", raw.trendingMovies],
+    ["popular-shows", "Popular Shows", "show", raw.popularShows],
+    ["popular-movies", "Popular Movies", "movie", raw.popularMovies],
+    ["top-rated-shows", "Top Rated Shows", "show", raw.topRatedShows],
+    ["top-rated-movies", "Top Rated Movies", "movie", raw.topRatedMovies],
+  ];
+
+  return {
+    rows: buckets
+      .map(([id, title, type, values]) => ({
+        id,
+        title,
+        items: asArray(values)
+          .map((item) =>
+            normalizeSearchResult({
+              ...asRecord(item),
+              type,
+              id: asRecord(item).id ?? asRecord(item).tmdbId,
+            }),
+          )
+          .filter(Boolean) as TitleSummary[],
+      }))
+      .filter((row) => row.items.length > 0),
+  };
 }
 
 export function mapTitleDetailPayload(type: MediaType, payload: unknown) {
@@ -281,10 +314,15 @@ export function mapProfilePayload(payload: unknown): ProfilePayload {
     reviews: asArray(raw.reviews)
       .map(normalizeLog)
       .filter(Boolean) as ProfilePayload["reviews"],
+    logs: asArray(raw.logs)
+      .map(normalizeLog)
+      .filter(Boolean) as ProfilePayload["logs"],
     pinned: asArray(raw.pinned ?? raw.pins)
       .map(normalizeProfilePin)
       .filter(Boolean) as ProfilePayload["pinned"],
     isFollowing: Boolean(raw.isFollowing ?? raw.following),
+    following: Boolean(raw.following ?? raw.isFollowing),
+    isSelf: Boolean(raw.isSelf),
   };
 }
 
@@ -336,6 +374,12 @@ function normalizeSearchResult(item: unknown): SearchResult | null {
   return {
     ...normalizeTitleLike(source, type),
     tmdbId: numberOrUndefined(source.tmdbId),
+    posterPath: nullableString(source.posterPath),
+    backdropPath: nullableString(source.backdropPath),
+    releaseDate: nullableString(source.releaseDate),
+    firstAirDate: nullableString(source.firstAirDate),
+    genres: asArray(source.genres).map(String),
+    runtime: numberOrUndefined(source.runtime),
     availabilityLabel: availabilityLabel(source.availability),
   };
 }
@@ -550,13 +594,41 @@ function normalizeSeason(season: unknown, watchedIds: Set<unknown>) {
 function normalizeListSummary(item: unknown): CustomListSummary | null {
   const raw = asRecord(item);
   if (!raw.id) return null;
+  const user = asRecord(raw.user);
+  const itemCovers = asArray(raw.items)
+    .map((listItem) => {
+      const record = asRecord(listItem);
+      const show = asRecord(record.show);
+      const movie = asRecord(record.movie);
+      return tmdbImageUrl(
+        record.posterUrl ??
+          record.posterPath ??
+          movie.posterPath ??
+          show.posterPath,
+      );
+    })
+    .filter(Boolean) as string[];
+  const covers = asArray(raw.covers)
+    .map((cover) => tmdbImageUrl(cover))
+    .filter(Boolean) as string[];
   return {
     id: stringValue(raw.id),
     title: stringValue(raw.title, "Untitled list"),
     description: nullableString(raw.description),
     visibility: normalizeVisibility(raw.visibility),
     count: numberOrUndefined(raw.count ?? asRecord(raw._count).items),
-    covers: asArray(raw.covers).map(String),
+    covers: covers.length ? covers : itemCovers,
+    canEdit: Boolean(raw.canEdit),
+    tags: asArray(raw.tags).map(String),
+    ranked: Boolean(raw.ranked),
+    user: raw.user
+      ? {
+          id: nullableString(user.id) ?? undefined,
+          name: nullableString(user.name),
+          username: nullableString(user.username),
+          avatarUrl: tmdbImageUrl(user.avatarUrl ?? user.image),
+        }
+      : undefined,
   };
 }
 
@@ -585,6 +657,7 @@ function normalizeListItem(item: unknown) {
     id: stringValue(raw.id ?? id),
     title: stringValue(raw.title ?? source.title, "Untitled"),
     type,
+    tmdbId: numberOrUndefined(source.tmdbId),
     showId: type === "show" ? stringValue(id) : undefined,
     movieId: type === "movie" ? stringValue(id) : undefined,
     rank: numberOrNull(raw.rank),
@@ -595,9 +668,10 @@ function normalizeListItem(item: unknown) {
   };
 }
 
-function normalizeProfilePin(item: unknown): TitleSummary | null {
+function normalizeProfilePin(item: unknown): ProfilePin | null {
   const raw = asRecord(item);
   const log = asRecord(raw.log);
+  const list = asRecord(raw.list);
   const typeText = nullableString(raw.type)?.toUpperCase();
   const showSource = asRecord(raw.show ?? log.show);
   const movieSource = asRecord(raw.movie ?? log.movie);
@@ -605,13 +679,60 @@ function normalizeProfilePin(item: unknown): TitleSummary | null {
   if (typeText === "SHOW" || raw.showId || showSource.id) {
     const id = raw.showId ?? showSource.id;
     if (!id) return null;
-    return normalizeTitleLike({ ...showSource, id }, "show");
+    const title = normalizeTitleLike({ ...showSource, id }, "show");
+    return {
+      id: title.id,
+      type: "show",
+      title: title.title,
+      subtitle: String(
+        title.nextLabel ?? title.progressLabel ?? title.year ?? "",
+      ),
+      posterUrl: title.posterUrl,
+      href: `/show/${title.id}`,
+    };
   }
 
   if (typeText === "MOVIE" || raw.movieId || movieSource.id) {
     const id = raw.movieId ?? movieSource.id;
     if (!id) return null;
-    return normalizeTitleLike({ ...movieSource, id }, "movie");
+    const title = normalizeTitleLike({ ...movieSource, id }, "movie");
+    return {
+      id: title.id,
+      type: "movie",
+      title: title.title,
+      subtitle: String(title.runtimeLabel ?? title.year ?? ""),
+      posterUrl: title.posterUrl,
+      href: `/movie/${title.id}`,
+    };
+  }
+
+  if (typeText === "LIST" || raw.listId || list.id) {
+    const id = raw.listId ?? list.id;
+    if (!id) return null;
+    return {
+      id: stringValue(id),
+      type: "list",
+      title: stringValue(raw.title ?? list.title, "List"),
+      subtitle: nullableString(list.description) ?? "Custom list",
+      posterUrl: tmdbImageUrl(asArray(list.covers)[0]),
+      href: `/list/${stringValue(id)}`,
+    };
+  }
+
+  if (typeText === "LOG" || raw.logId || log.id) {
+    const id = raw.logId ?? log.id;
+    if (!id) return null;
+    const normalizedLog = normalizeLog(log);
+    return {
+      id: stringValue(id),
+      type: "log",
+      title: normalizedLog?.title ?? "Review",
+      subtitle:
+        normalizedLog?.rating !== null && normalizedLog?.rating !== undefined
+          ? `${normalizedLog.rating}/10 review`
+          : "Review",
+      href: `/log/${stringValue(id)}`,
+    };
   }
 
   return null;
@@ -701,14 +822,27 @@ function normalizeLog(item: unknown): ReviewSummary | null {
   const movie = asRecord(raw.movie);
   const episode = asRecord(raw.episode);
   const title = raw.title ?? show.title ?? movie.title ?? episode.name;
+  const seasonNumber = numberOrUndefined(episode.seasonNumber);
+  const episodeNumber = numberOrUndefined(episode.episodeNumber);
+  const episodeLabel =
+    seasonNumber && episodeNumber ? `S${seasonNumber}E${episodeNumber}` : null;
   return {
     id: stringValue(raw.id),
     title: nullableString(title),
+    subtitle:
+      nullableString(raw.subtitle) ??
+      (episodeLabel
+        ? `${stringValue(show.title, "Untitled")} · ${episodeLabel}`
+        : nullableString(movie.title ?? show.title)),
     body: nullableString(raw.body ?? raw.review),
     rating: numberOrNull(raw.rating),
     spoiler: Boolean(raw.spoiler),
     visibility: normalizeVisibility(raw.visibility),
     createdAt: nullableString(raw.createdAt ?? raw.watchedAt),
+    watchedAt: nullableString(raw.watchedAt ?? raw.createdAt),
+    posterUrl: tmdbImageUrl(
+      raw.posterUrl ?? raw.posterPath ?? movie.posterPath ?? show.posterPath,
+    ),
     reactionScore: numberOrUndefined(raw.reactionScore),
     userReaction: numberOrUndefined(raw.userReaction),
     canEdit: Boolean(raw.canEdit),

@@ -14,7 +14,10 @@ export async function authedApiRequest<TResponse>(
 ) {
   if (options.method && options.method !== "GET") {
     const network = await NetInfo.fetch();
-    assertOnlineForMutation({ isConnected: network.isConnected });
+    assertOnlineForMutation({
+      isConnected:
+        network.isConnected === true && network.isInternetReachable !== false,
+    });
   }
 
   return apiRequest<TResponse>(path, {
@@ -32,7 +35,10 @@ export function useApiMutation<
     ...options,
     mutationFn: async (variables: TVariables) => {
       const network = await NetInfo.fetch();
-      assertOnlineForMutation({ isConnected: network.isConnected });
+      assertOnlineForMutation({
+        isConnected:
+          network.isConnected === true && network.isInternetReachable !== false,
+      });
       return authedApiRequest<TResponse>(variables.path, {
         method: "POST",
         body: variables.body,

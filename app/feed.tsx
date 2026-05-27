@@ -18,7 +18,11 @@ export default function FeedScreen() {
   const feed = useFeedQuery();
   const items = feed.data?.items ?? [];
   return (
-    <Screen title="Feed" subtitle="Visible activity from people you follow.">
+    <Screen
+      back
+      title="Feed"
+      subtitle="Visible activity from people you follow."
+    >
       {feed.isLoading ? <LoadingState label="Loading feed" /> : null}
       {feed.isError ? (
         <ErrorState

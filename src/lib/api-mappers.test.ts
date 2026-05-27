@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   mapCalendarPayload,
+  mapDiscoverPayload,
   mapFeedPayload,
   mapHomePayload,
   mapListDetailPayload,
@@ -205,6 +206,56 @@ describe("mapCalendarPayload", () => {
   });
 });
 
+describe("mapDiscoverPayload", () => {
+  it("converts backend discover buckets into app rows", () => {
+    expect(
+      mapDiscoverPayload({
+        trendingShows: [
+          {
+            tmdbId: 100,
+            title: "Silo",
+            posterPath: "/silo.jpg",
+            firstAirDate: "2023-05-05",
+          },
+        ],
+        popularMovies: [
+          {
+            tmdbId: 200,
+            title: "Heat",
+            posterPath: "/heat.jpg",
+            releaseDate: "1995-12-15",
+          },
+        ],
+      }),
+    ).toMatchObject({
+      rows: [
+        {
+          id: "trending-shows",
+          items: [
+            {
+              type: "show",
+              tmdbId: 100,
+              posterPath: "/silo.jpg",
+              firstAirDate: "2023-05-05",
+            },
+          ],
+        },
+        {
+          id: "popular-movies",
+          items: [
+            {
+              type: "movie",
+              tmdbId: 200,
+              posterPath: "/heat.jpg",
+              releaseDate: "1995-12-15",
+            },
+          ],
+        },
+      ],
+    });
+  });
+});
+
 describe("mapTitleDetailPayload", () => {
   it("unwraps show details and marks watched episodes from progress ids", () => {
     expect(
@@ -258,12 +309,40 @@ describe("list and log wrappers", () => {
   it("unwraps list and log payloads from web API envelopes", () => {
     expect(
       mapListDetailPayload({
-        list: { id: "list-1", title: "Best", canEdit: true, items: [] },
+        list: {
+          id: "list-1",
+          title: "Best",
+          canEdit: true,
+          ranked: true,
+          tags: ["noir"],
+          items: [
+            {
+              id: "item-1",
+              movie: {
+                id: "movie-1",
+                title: "Heat",
+                tmdbId: 949,
+                posterPath: "/heat.jpg",
+              },
+            },
+          ],
+        },
       }),
     ).toMatchObject({
       id: "list-1",
       title: "Best",
       canEdit: true,
+      ranked: true,
+      tags: ["noir"],
+      covers: ["https://image.tmdb.org/t/p/w500/heat.jpg"],
+      items: [
+        {
+          id: "item-1",
+          movieId: "movie-1",
+          tmdbId: 949,
+          posterUrl: "https://image.tmdb.org/t/p/w500/heat.jpg",
+        },
+      ],
     });
     expect(
       mapLogPayload({
@@ -296,6 +375,16 @@ describe("mapProfilePayload", () => {
           ],
         },
         calendar: [{ date: "2026-05-27", total: 1, parts: ["1 episode"] }],
+        following: true,
+        isSelf: false,
+        logs: [
+          {
+            id: "log-2",
+            watchedAt: "2026-05-26T00:00:00.000Z",
+            rating: 8,
+            movie: { id: "movie-2", title: "Thief", posterPath: "/thief.jpg" },
+          },
+        ],
         pins: [
           {
             type: "SHOW",
@@ -306,6 +395,16 @@ describe("mapProfilePayload", () => {
             type: "MOVIE",
             movieId: "movie-1",
             movie: { id: "movie-1", title: "Heat" },
+          },
+          {
+            type: "LIST",
+            listId: "list-1",
+            list: { id: "list-1", title: "Comfort watches" },
+          },
+          {
+            type: "LOG",
+            logId: "log-1",
+            log: { id: "log-1", title: "Silo", rating: 9 },
           },
         ],
       }),
@@ -321,9 +420,26 @@ describe("mapProfilePayload", () => {
         "Top genres": "Drama, Comedy",
       },
       calendar: [{ date: "2026-05-27", total: 1 }],
+      following: true,
+      isSelf: false,
+      logs: [
+        {
+          id: "log-2",
+          title: "Thief",
+          watchedAt: "2026-05-26T00:00:00.000Z",
+          posterUrl: "https://image.tmdb.org/t/p/w500/thief.jpg",
+        },
+      ],
       pinned: [
-        { id: "show-1", type: "show", title: "Silo" },
-        { id: "movie-1", type: "movie", title: "Heat" },
+        { id: "show-1", type: "show", title: "Silo", href: "/show/show-1" },
+        { id: "movie-1", type: "movie", title: "Heat", href: "/movie/movie-1" },
+        {
+          id: "list-1",
+          type: "list",
+          title: "Comfort watches",
+          href: "/list/list-1",
+        },
+        { id: "log-1", type: "log", title: "Silo", href: "/log/log-1" },
       ],
     });
   });

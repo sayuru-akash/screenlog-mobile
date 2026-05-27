@@ -46,6 +46,7 @@ export default function LogDetailScreen() {
   const hiddenSpoiler = Boolean(log.data?.spoiler && !revealed);
   return (
     <Screen
+      back
       title={log.data?.title || "Review"}
       subtitle={log.data?.rating ? `${log.data.rating}/10` : undefined}
     >

@@ -1,15 +1,19 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
+import { useState } from "react";
 import { View } from "react-native";
 import { Button } from "@/components/primitives/Button";
 import { Screen } from "@/components/primitives/Screen";
-import { Section } from "@/components/primitives/Section";
-import {
-  EmptyState,
-  ErrorState,
-  LoadingState,
-} from "@/components/primitives/StateViews";
+import { ErrorState, LoadingState } from "@/components/primitives/StateViews";
 import { AppText } from "@/components/primitives/Text";
-import { ActivityCalendar } from "@/components/profile/ActivityCalendar";
+import {
+  ProfileHero,
+  ProfileListGrid,
+  ProfileLogList,
+  ProfileOverview,
+  ProfileStats,
+  ProfileTabs,
+  type ProfileTab,
+} from "@/components/profile/ProfileSurface";
 import {
   useFollowMutation,
   useUserProfileQuery,
@@ -20,13 +24,18 @@ export default function UserProfileScreen() {
   const theme = useTheme();
   const { username } = useLocalSearchParams<{ username: string }>();
   const profile = useUserProfileQuery(username);
-  const follow = useFollowMutation(
-    username,
-    Boolean(profile.data?.isFollowing),
+  const [tab, setTab] = useState<ProfileTab>("overview");
+  const isFollowing = Boolean(
+    profile.data?.following ?? profile.data?.isFollowing,
   );
-  const user = profile.data?.user;
+  const follow = useFollowMutation(username, isFollowing);
+
   return (
-    <Screen title={user?.name || username} subtitle={`@${username}`}>
+    <Screen
+      back
+      title={profile.data?.user?.name || username}
+      subtitle={username ? `@${username}` : undefined}
+    >
       {profile.isLoading ? <LoadingState label="Loading profile" /> : null}
       {profile.isError ? (
         <ErrorState
@@ -35,56 +44,47 @@ export default function UserProfileScreen() {
         />
       ) : null}
       {profile.data ? (
-        <>
-          <AppText muted>{user?.bio || "Visible Watchlog profile."}</AppText>
-          <Button loading={follow.isPending} onPress={() => follow.mutate()}>
-            {profile.data.isFollowing ? "Unfollow" : "Follow"}
-          </Button>
+        <View style={{ gap: theme.spacing.xl }}>
+          <ProfileHero
+            profile={profile.data}
+            action={
+              !profile.data.isSelf ? (
+                <Button
+                  variant={isFollowing ? "secondary" : "primary"}
+                  loading={follow.isPending}
+                  onPress={() => follow.mutate()}
+                >
+                  {isFollowing ? "Following" : "Follow"}
+                </Button>
+              ) : null
+            }
+          />
           {follow.isError ? (
             <AppText style={{ color: theme.colors.danger }}>
               {follow.error.message}
             </AppText>
           ) : null}
-          <Section title="Activity">
-            <ActivityCalendar days={profile.data.calendar} />
-          </Section>
-          <Section title="Reviews">
-            {profile.data.reviews?.length ? (
-              <View style={{ gap: theme.spacing.sm }}>
-                {profile.data.reviews.map((review) => (
-                  <Button
-                    key={review.id}
-                    variant="ghost"
-                    onPress={() => router.push(`/log/${review.id}`)}
-                  >
-                    {review.spoiler
-                      ? "Spoiler review"
-                      : review.title || review.body || "Review"}
-                  </Button>
-                ))}
-              </View>
-            ) : (
-              <EmptyState title="No visible reviews" />
-            )}
-          </Section>
-          <Section title="Lists">
-            {profile.data.lists?.length ? (
-              <View style={{ gap: theme.spacing.sm }}>
-                {profile.data.lists.map((list) => (
-                  <Button
-                    key={list.id}
-                    variant="ghost"
-                    onPress={() => router.push(`/list/${list.id}`)}
-                  >
-                    {list.title}
-                  </Button>
-                ))}
-              </View>
-            ) : (
-              <EmptyState title="No visible lists" />
-            )}
-          </Section>
-        </>
+          <ProfileStats profile={profile.data} />
+          <ProfileTabs value={tab} onChange={setTab} />
+          {tab === "overview" ? (
+            <ProfileOverview profile={profile.data} onTabChange={setTab} />
+          ) : null}
+          {tab === "history" ? (
+            <ProfileLogList
+              logs={profile.data.logs}
+              empty="No visible watch history yet."
+            />
+          ) : null}
+          {tab === "reviews" ? (
+            <ProfileLogList
+              logs={profile.data.reviews}
+              empty="No visible reviews yet."
+            />
+          ) : null}
+          {tab === "lists" ? (
+            <ProfileListGrid lists={profile.data.lists} />
+          ) : null}
+        </View>
       ) : null}
     </Screen>
   );

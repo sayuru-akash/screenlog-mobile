@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Switch, TextInput, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Pressable, ScrollView, Switch, TextInput, View } from "react-native";
+import { Image } from "expo-image";
 import { Button } from "@/components/primitives/Button";
 import { Screen } from "@/components/primitives/Screen";
 import { Section } from "@/components/primitives/Section";
@@ -15,8 +16,11 @@ import {
   useSettingsQuery,
 } from "@/features/settings/queries";
 import { useTheme } from "@/lib/theme";
+import { tmdbImageUrl } from "@/lib/api-mappers";
+import { useThemePreferenceStore } from "@/lib/theme";
 import type {
   NotificationSettingsPayload,
+  ProviderSummary,
   ProviderSettingsPayload,
   SettingsPayload,
   Visibility,
@@ -30,6 +34,9 @@ const visibilityOptions: Array<{ label: string; value: Visibility }> = [
 
 export default function SettingsScreen() {
   const theme = useTheme();
+  const setThemePreference = useThemePreferenceStore(
+    (state) => state.setPreference,
+  );
   const settings = useSettingsQuery();
   const notificationSettings = useNotificationSettingsQuery();
   const providers = useProvidersQuery(
@@ -66,13 +73,17 @@ export default function SettingsScreen() {
   };
   const mergedProviders: ProviderSettingsPayload = {
     region: mergedDraft.region || "US",
-    providerIds: [],
-    streamingTypes: ["FLATRATE", "FREE"],
+    providerIds: providers.data?.selectedProviderIds ?? [],
+    streamingTypes: providers.data?.streamingTypes ?? ["FLATRATE", "FREE"],
     ...providerDraft,
   };
 
+  useEffect(() => {
+    if (mergedDraft.theme) setThemePreference(mergedDraft.theme);
+  }, [mergedDraft.theme, setThemePreference]);
+
   return (
-    <Screen title="Settings" subtitle="Account, providers, visibility.">
+    <Screen back title="Settings" subtitle="Account, providers, visibility.">
       {settings.isLoading ? <LoadingState label="Loading settings" /> : null}
       {settings.isError ? (
         <ErrorState
@@ -117,24 +128,18 @@ export default function SettingsScreen() {
         />
       </Section>
       <Section title="Appearance">
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
+        <SegmentedOptions
+          value={mergedDraft.theme ?? "system"}
+          options={[
+            ["system", "System"],
+            ["light", "Light"],
+            ["dark", "Dark"],
+          ]}
+          onChange={(themeValue) => {
+            setThemePreference(themeValue);
+            setDraft((value) => ({ ...value, theme: themeValue }));
           }}
-        >
-          <AppText>Dark mode</AppText>
-          <Switch
-            value={mergedDraft.theme === "dark"}
-            onValueChange={(dark) =>
-              setDraft((value) => ({
-                ...value,
-                theme: dark ? "dark" : "system",
-              }))
-            }
-          />
-        </View>
+        />
       </Section>
       <Section title="Defaults">
         <VisibilityPicker
@@ -215,22 +220,49 @@ export default function SettingsScreen() {
         </Button>
       </Section>
       <Section title="Providers">
+        {providers.isLoading ? <LoadingState label="Loading services" /> : null}
+        {providers.isError ? (
+          <ErrorState
+            message={providers.error.message}
+            onRetry={() => void providers.refetch()}
+          />
+        ) : null}
         <AppText muted>
-          {providers.data?.providers?.length ?? 0} services available for{" "}
-          {mergedProviders.region}.
+          {providers.data?.providers?.length ?? 0} services for{" "}
+          {providers.data?.catalogRegion ?? mergedProviders.region}
+          {providers.data?.isFallbackCatalog ? " fallback catalog" : ""}.
         </AppText>
-        <Input
-          label="Provider IDs"
-          value={mergedProviders.providerIds.join(",")}
-          placeholder="8,9,337"
-          onChangeText={(providerIds) =>
-            setProviderDraft((value) => ({
-              ...value,
-              providerIds: providerIds
-                .split(",")
-                .map((id) => id.trim())
-                .filter(Boolean),
-            }))
+        <ProviderPicker
+          providerIds={mergedProviders.providerIds}
+          providers={providers.data?.providers ?? []}
+          onChange={(providerIds) =>
+            setProviderDraft((value) => ({ ...value, providerIds }))
+          }
+        />
+        <SegmentedOptions
+          valueSet={new Set(mergedProviders.streamingTypes)}
+          options={[
+            ["FLATRATE", "Included"],
+            ["FREE", "Free"],
+            ["ADS", "Ads"],
+            ["RENT", "Rent"],
+            ["BUY", "Buy"],
+          ]}
+          multi
+          onToggle={(streamingType) =>
+            setProviderDraft((value) => {
+              const current = new Set(
+                value.streamingTypes ?? mergedProviders.streamingTypes,
+              );
+              if (current.has(streamingType)) current.delete(streamingType);
+              else current.add(streamingType);
+              return {
+                ...value,
+                streamingTypes: Array.from(current).length
+                  ? Array.from(current)
+                  : ["FLATRATE"],
+              };
+            })
           }
         />
         {saveProviders.isError ? (
@@ -313,6 +345,126 @@ function VisibilityPicker({
         ))}
       </View>
     </View>
+  );
+}
+
+function SegmentedOptions<TValue extends string>({
+  value,
+  valueSet,
+  options,
+  multi,
+  onChange,
+  onToggle,
+}: {
+  value?: TValue;
+  valueSet?: Set<TValue>;
+  options: Array<[TValue, string]>;
+  multi?: boolean;
+  onChange?: (value: TValue) => void;
+  onToggle?: (value: TValue) => void;
+}) {
+  const theme = useTheme();
+  return (
+    <View
+      style={{ flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm }}
+    >
+      {options.map(([optionValue, label]) => {
+        const selected = multi
+          ? Boolean(valueSet?.has(optionValue))
+          : value === optionValue;
+        return (
+          <Button
+            key={optionValue}
+            variant={selected ? "secondary" : "ghost"}
+            onPress={() =>
+              multi ? onToggle?.(optionValue) : onChange?.(optionValue)
+            }
+          >
+            {label}
+          </Button>
+        );
+      })}
+    </View>
+  );
+}
+
+function ProviderPicker({
+  providerIds,
+  providers,
+  onChange,
+}: {
+  providerIds: string[];
+  providers: ProviderSummary[];
+  onChange: (providerIds: string[]) => void;
+}) {
+  const theme = useTheme();
+  const selected = new Set(providerIds);
+  if (!providers.length) return <AppText muted>No services found.</AppText>;
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      <View
+        style={{
+          flexDirection: "row",
+          gap: theme.spacing.sm,
+          paddingRight: theme.spacing.lg,
+        }}
+      >
+        {providers.slice(0, 40).map((provider) => {
+          const active = Boolean(provider.id && selected.has(provider.id));
+          const logoUrl = tmdbImageUrl(provider.logoUrl ?? provider.logoPath);
+          return (
+            <Pressable
+              key={provider.id ?? provider.name}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={`${active ? "Remove" : "Select"} ${
+                provider.name
+              }`}
+              onPress={() => {
+                if (!provider.id) return;
+                const next = new Set(selected);
+                if (next.has(provider.id)) next.delete(provider.id);
+                else next.add(provider.id);
+                onChange(Array.from(next));
+              }}
+              style={({ pressed }) => ({
+                width: 108,
+                minHeight: 96,
+                borderRadius: theme.radius.md,
+                padding: theme.spacing.sm,
+                gap: theme.spacing.sm,
+                borderWidth: 1,
+                borderColor: active ? theme.colors.accent : theme.colors.border,
+                backgroundColor: active
+                  ? theme.colors.accentSoft
+                  : theme.colors.surface,
+                opacity: pressed ? 0.72 : 1,
+              })}
+            >
+              <View
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 10,
+                  backgroundColor: theme.colors.surfaceMuted,
+                  overflow: "hidden",
+                }}
+              >
+                {logoUrl ? (
+                  <Image
+                    source={{ uri: logoUrl }}
+                    style={{ width: "100%", height: "100%" }}
+                  />
+                ) : null}
+              </View>
+              <AppText variant="caption" numberOfLines={2}>
+                {provider.name}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </View>
+    </ScrollView>
   );
 }
 

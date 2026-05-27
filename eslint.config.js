@@ -33,6 +33,7 @@ export default tseslint.config(
       "ios/",
       "android/",
       "babel.config.cjs",
+      "plugins/*.cjs",
     ],
   },
   prettier,

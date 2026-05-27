@@ -15,6 +15,7 @@ scope.
 - `src/lib/` - API client, auth client, query client, query keys, theme helpers.
 - `src/stores/` - Small Zustand stores for UI state only.
 - `src/types/` - Shared TypeScript API and domain types.
+- `plugins/` - Expo config plugins that patch generated native projects.
 - `assets/` - App icons, splash images, and local static assets.
 - `SPEC.md` - Product scope, API contract, and acceptance criteria.
 - `DESIGN.md` - Native design system, UX rules, and screen behavior.
@@ -22,6 +23,7 @@ scope.
 - `AGENTS.md` - Agent-facing rules and guardrails.
 - `.env.example` - Safe public mobile environment template.
 - `.gitignore` - Local env, dependency, native build, and generated-file ignores.
+- `eas.json` - EAS Build profiles for development, preview, production, and submit.
 
 ## Build & Development Commands
 

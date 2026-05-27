@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { Bell, MoreHorizontal } from "lucide-react-native";
+import { Bell } from "lucide-react-native";
 import { Pressable, View } from "react-native";
 import { Image } from "expo-image";
 import { Button } from "@/components/primitives/Button";
@@ -13,6 +13,7 @@ import {
   LoadingState,
 } from "@/components/primitives/StateViews";
 import { TitleRail } from "@/components/content/TitleRail";
+import { ProviderChip } from "@/components/content/ProviderChip";
 import {
   titleToWatchlistInput,
   useProgressMutation,
@@ -97,6 +98,7 @@ export default function HomeScreen() {
                       upNext.progressLabel ||
                       "Ready when you are."}
                   </AppText>
+                  <ProviderChip provider={upNext.provider} />
                   <View
                     style={{
                       flexDirection: "row",
@@ -123,9 +125,6 @@ export default function HomeScreen() {
                     >
                       Mark Watched
                     </Button>
-                    <IconButton label="More actions">
-                      <MoreHorizontal size={18} color={theme.colors.text} />
-                    </IconButton>
                   </View>
                 </View>
               </View>

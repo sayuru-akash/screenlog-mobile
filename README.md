@@ -80,6 +80,10 @@ Initialize EAS:
 npx eas-cli@latest init
 ```
 
+This repo includes `eas.json` with development-client, preview APK, production,
+and submit profiles. Keep profile names stable because docs and agent workflows
+refer to them directly.
+
 ## Environment
 
 Copy the committed example and edit only local values:
@@ -94,6 +98,11 @@ Cloudflare Worker origin, keep `EXPO_PUBLIC_APP_SCHEME=watchlog`, and keep
 
 Only `EXPO_PUBLIC_*` values belong in the mobile app. Backend secrets stay in the
 Watchlog web/worker environment and must never be copied into this repo.
+
+Android production builds block unused storage and overlay permissions in
+`app.json`; keep requested permissions limited to what Watchlog actually uses.
+`plugins/with-android-user-leave-hint-guard.cjs` patches the generated Android
+Activity to avoid a React Native delegate crash during background transitions.
 
 ## Backend Setup Required
 

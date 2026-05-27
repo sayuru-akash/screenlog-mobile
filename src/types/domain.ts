@@ -12,8 +12,11 @@ export type WatchStatus =
 
 export type ProviderSummary = {
   id?: string;
+  tmdbProviderId?: number;
   name: string;
   logoUrl?: string | null;
+  logoPath?: string | null;
+  displayPriority?: number;
   type?: string | null;
 };
 
@@ -36,6 +39,19 @@ export type TitleSummary = {
   provider?: ProviderSummary | null;
 };
 
+export type ProfilePin = {
+  id: string;
+  type: MediaType | "list" | "log";
+  title: string;
+  subtitle?: string | null;
+  posterUrl?: string | null;
+  href:
+    | `/show/${string}`
+    | `/movie/${string}`
+    | `/list/${string}`
+    | `/log/${string}`;
+};
+
 export type ActivityItem = {
   id: string;
   text: string;
@@ -56,6 +72,12 @@ export type HomePayload = {
 
 export type SearchResult = TitleSummary & {
   tmdbId?: number;
+  posterPath?: string | null;
+  backdropPath?: string | null;
+  releaseDate?: string | null;
+  firstAirDate?: string | null;
+  genres?: string[];
+  runtime?: number;
   availabilityLabel?: string | null;
 };
 
@@ -106,18 +128,24 @@ export type ProfilePayload = {
   stats?: Record<string, string | number | null>;
   lists?: CustomListSummary[];
   reviews?: ReviewSummary[];
-  pinned?: TitleSummary[];
+  logs?: ReviewSummary[];
+  pinned?: ProfilePin[];
   isFollowing?: boolean;
+  following?: boolean;
+  isSelf?: boolean;
 };
 
 export type ReviewSummary = {
   id: string;
   title?: string | null;
+  subtitle?: string | null;
   body?: string | null;
   rating?: number | null;
   spoiler?: boolean;
   visibility?: Visibility;
   createdAt?: string | null;
+  watchedAt?: string | null;
+  posterUrl?: string | null;
   reactionScore?: number;
   userReaction?: number;
   canEdit?: boolean;
@@ -133,6 +161,13 @@ export type CustomListSummary = {
   covers?: string[];
   canEdit?: boolean;
   tags?: string[];
+  ranked?: boolean;
+  user?: {
+    id?: string;
+    name?: string | null;
+    username?: string | null;
+    avatarUrl?: string | null;
+  };
 };
 
 export type CustomListDetail = CustomListSummary & {
@@ -141,6 +176,7 @@ export type CustomListDetail = CustomListSummary & {
     id: string;
     title: string;
     type: MediaType;
+    tmdbId?: number;
     showId?: string;
     movieId?: string;
     rank?: number | null;
@@ -173,4 +209,13 @@ export type ProviderSettingsPayload = {
   region: string;
   providerIds: string[];
   streamingTypes: Array<"FLATRATE" | "FREE" | "ADS" | "RENT" | "BUY">;
+};
+
+export type ProviderCatalogPayload = {
+  region?: string;
+  catalogRegion?: string;
+  isFallbackCatalog?: boolean;
+  selectedProviderIds?: string[];
+  streamingTypes?: ProviderSettingsPayload["streamingTypes"];
+  providers?: ProviderSummary[];
 };

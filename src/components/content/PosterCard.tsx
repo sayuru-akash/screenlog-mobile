@@ -2,6 +2,7 @@ import { Pressable, View } from "react-native";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { AppText } from "@/components/primitives/Text";
+import { ProviderChip } from "./ProviderChip";
 import { useLookupTitleMutation } from "@/features/search/queries";
 import { useTheme } from "@/lib/theme";
 import type { TitleSummary } from "@/types/domain";
@@ -74,6 +75,7 @@ export function PosterCard({
             item.status ||
             "Watchlog"}
         </AppText>
+        <ProviderChip provider={item.provider} compact />
       </View>
     </Pressable>
   );

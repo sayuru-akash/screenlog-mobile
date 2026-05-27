@@ -35,13 +35,14 @@ describe("buildListItemPayload", () => {
         tmdbId: 37854,
         overview: "Pirates.",
         posterUrl: "/poster.jpg",
+        posterPath: "/raw-poster.jpg",
       }),
     ).toEqual({
       type: "show",
       tmdbId: 37854,
       title: "One Piece",
       overview: "Pirates.",
-      posterPath: "/poster.jpg",
+      posterPath: "/raw-poster.jpg",
     });
   });
 });

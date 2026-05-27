@@ -26,7 +26,7 @@ export function useFollowMutation(username: string, following: boolean) {
     mutationFn: () =>
       authedApiRequest(`/users/${username}/follow`, {
         method: following ? "DELETE" : "POST",
-        body: following ? undefined : {},
+        body: {},
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({

@@ -3,6 +3,7 @@ import { Image } from "expo-image";
 import { router } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
 import { AppText } from "@/components/primitives/Text";
+import { ProviderChip } from "./ProviderChip";
 import { useTheme } from "@/lib/theme";
 import type { TitleSummary } from "@/types/domain";
 
@@ -57,6 +58,7 @@ export function TitleRow({
             item.year ||
             "Watchlog"}
         </AppText>
+        <ProviderChip provider={item.provider} compact />
       </View>
       {right ?? <ChevronRight size={18} color={theme.colors.faint} />}
     </Pressable>

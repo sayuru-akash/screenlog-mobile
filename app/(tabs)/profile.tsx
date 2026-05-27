@@ -1,27 +1,33 @@
 import { router } from "expo-router";
 import { Settings } from "lucide-react-native";
+import { useState } from "react";
 import { View } from "react-native";
 import { Button } from "@/components/primitives/Button";
 import { Screen } from "@/components/primitives/Screen";
-import { Section } from "@/components/primitives/Section";
 import {
-  EmptyState,
   ErrorState,
   IconButton,
   LoadingState,
 } from "@/components/primitives/StateViews";
-import { AppText } from "@/components/primitives/Text";
-import { ActivityCalendar } from "@/components/profile/ActivityCalendar";
-import { TitleRail } from "@/components/content/TitleRail";
+import {
+  ProfileHero,
+  ProfileListGrid,
+  ProfileLogList,
+  ProfileOverview,
+  ProfileStats,
+  ProfileTabs,
+  type ProfileTab,
+} from "@/components/profile/ProfileSurface";
 import { useProfileQuery } from "@/features/profile/queries";
 import { signOut } from "@/features/auth/actions";
-import { initials } from "@/lib/format";
 import { useTheme } from "@/lib/theme";
 
 export default function ProfileScreen() {
   const theme = useTheme();
   const profile = useProfileQuery();
+  const [tab, setTab] = useState<ProfileTab>("overview");
   const user = profile.data?.user;
+
   return (
     <Screen
       title="Profile"
@@ -41,73 +47,71 @@ export default function ProfileScreen() {
           onRetry={() => void profile.refetch()}
         />
       ) : null}
-      {!profile.isLoading && !profile.isError ? (
-        <>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: theme.spacing.md,
-            }}
-          >
-            <View
-              style={{
-                width: 68,
-                height: 68,
-                borderRadius: 34,
-                backgroundColor: theme.colors.accentSoft,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <AppText variant="heading" style={{ color: theme.colors.accent }}>
-                {initials(user?.name || user?.username)}
-              </AppText>
-            </View>
-            <View style={{ flex: 1, gap: 3 }}>
-              <AppText variant="heading">{user?.name || "Watchlog"}</AppText>
-              <AppText muted>{user?.bio || "Tracking what you watch."}</AppText>
-            </View>
-          </View>
-          <View style={{ flexDirection: "row", gap: theme.spacing.sm }}>
-            <Button variant="secondary" onPress={() => router.push("/lists")}>
-              Lists
-            </Button>
-            <Button variant="ghost" onPress={() => router.push("/feed")}>
-              Feed
-            </Button>
-            <Button
-              variant="danger"
-              onPress={() =>
-                void signOut().then(() => router.replace("/(auth)/sign-in"))
-              }
-            >
-              Sign Out
-            </Button>
-          </View>
-          <Section title="Activity">
-            <ActivityCalendar days={profile.data?.calendar} />
-          </Section>
-          <Section title="Pinned">
-            <TitleRail
-              items={profile.data?.pinned}
-              empty="Pin up to three titles."
-            />
-          </Section>
-          <Section title="Stats">
-            {profile.data?.stats ? (
-              <View style={{ gap: theme.spacing.sm }}>
-                {Object.entries(profile.data.stats).map(([key, value]) => (
-                  <AppText key={key}>
-                    {key}: {value ?? "0"}
-                  </AppText>
-                ))}
+      {!profile.isLoading && !profile.isError && profile.data ? (
+        <View style={{ gap: theme.spacing.xl }}>
+          <ProfileHero
+            profile={profile.data}
+            action={
+              <View
+                style={{
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                  gap: theme.spacing.sm,
+                }}
+              >
+                {user?.username ? (
+                  <Button
+                    variant="secondary"
+                    onPress={() => router.push(`/user/${user.username}`)}
+                  >
+                    Public View
+                  </Button>
+                ) : null}
+                <Button
+                  variant="secondary"
+                  onPress={() => router.push("/lists")}
+                >
+                  Lists
+                </Button>
+                <Button variant="ghost" onPress={() => router.push("/feed")}>
+                  Friends Feed
+                </Button>
+                <Button
+                  variant="danger"
+                  onPress={() =>
+                    void signOut().then(() => router.replace("/(auth)/sign-in"))
+                  }
+                >
+                  Sign Out
+                </Button>
               </View>
-            ) : (
-              <EmptyState title="No stats yet" />
-            )}
-          </Section>
-        </>
+            }
+          />
+          <ProfileStats profile={profile.data} />
+          <ProfileTabs value={tab} onChange={setTab} />
+          {tab === "overview" ? (
+            <ProfileOverview
+              profile={profile.data}
+              onTabChange={setTab}
+              canCreateLists
+            />
+          ) : null}
+          {tab === "history" ? (
+            <ProfileLogList
+              logs={profile.data.logs}
+              empty="Your watch history will appear here."
+            />
+          ) : null}
+          {tab === "reviews" ? (
+            <ProfileLogList
+              logs={profile.data.reviews}
+              empty="Your reviews will appear here."
+            />
+          ) : null}
+          {tab === "lists" ? (
+            <ProfileListGrid lists={profile.data.lists} />
+          ) : null}
+        </View>
       ) : null}
     </Screen>
   );

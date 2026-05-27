@@ -1,4 +1,5 @@
 import { authClient } from "@/lib/auth-client";
+import { getPublicConfig } from "@/lib/api-client";
 
 type AuthResult = { error?: { message?: string } | null };
 type AuthApi = {
@@ -27,7 +28,8 @@ type AuthApi = {
 const api = authClient as AuthApi;
 
 export async function signInWithEmail(email: string, password: string) {
-  const result = await api.signIn?.email?.({ email, password });
+  const signIn = requireAuthMethod(api.signIn?.email, "signIn.email");
+  const result = await signIn({ email, password });
   throwIfAuthError(result);
 }
 
@@ -36,28 +38,50 @@ export async function signUpWithEmail(
   email: string,
   password: string,
 ) {
-  const result = await api.signUp?.email?.({ name, email, password });
+  const signUp = requireAuthMethod(api.signUp?.email, "signUp.email");
+  const result = await signUp({ name, email, password });
   throwIfAuthError(result);
 }
 
 export async function signOut() {
-  const result = await api.signOut?.();
+  const signOutAction = requireAuthMethod(api.signOut, "signOut");
+  const result = await signOutAction();
   throwIfAuthError(result);
 }
 
 export async function requestPasswordReset(email: string) {
-  const result = await api.requestPasswordReset?.({ email });
+  const requestReset = requireAuthMethod(
+    api.requestPasswordReset,
+    "requestPasswordReset",
+  );
+  const { appScheme } = getPublicConfig();
+  const result = await requestReset({
+    email,
+    redirectTo: `${appScheme}://reset-password`,
+  });
   throwIfAuthError(result);
 }
 
 export async function resetPassword(token: string, newPassword: string) {
-  const result = await api.resetPassword?.({ token, newPassword });
+  const resetPasswordAction = requireAuthMethod(
+    api.resetPassword,
+    "resetPassword",
+  );
+  const result = await resetPasswordAction({ token, newPassword });
   throwIfAuthError(result);
 }
 
 export async function requestAccountDeletion() {
-  const result = await api.deleteUser?.();
+  const deleteUser = requireAuthMethod(api.deleteUser, "deleteUser");
+  const result = await deleteUser();
   throwIfAuthError(result);
+}
+
+function requireAuthMethod<
+  TMethod extends (...args: never[]) => Promise<AuthResult>,
+>(method: TMethod | undefined, name: string) {
+  if (!method) throw new Error(`Better Auth method ${name} is unavailable`);
+  return method;
 }
 
 function throwIfAuthError(result: AuthResult | undefined) {

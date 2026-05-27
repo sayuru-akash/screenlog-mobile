@@ -12,7 +12,7 @@ export default function DiscoverScreen() {
   const discover = useDiscoverQuery();
   const rows = discover.data?.rows ?? [];
   return (
-    <Screen title="Discover" subtitle="Fresh rows from Watchlog.">
+    <Screen back title="Discover" subtitle="Fresh rows from Watchlog.">
       {discover.isLoading ? <LoadingState label="Loading discovery" /> : null}
       {discover.isError ? (
         <ErrorState

@@ -28,8 +28,12 @@ export function buildListItemPayload(item: SearchResult) {
     tmdbId: item.tmdbId,
     title: item.title,
     overview: item.overview,
-    posterPath: item.posterUrl,
-    backdropPath: item.backdropUrl,
+    posterPath: item.posterPath ?? item.posterUrl,
+    backdropPath: item.backdropPath ?? item.backdropUrl,
+    releaseDate: item.releaseDate,
+    firstAirDate: item.firstAirDate,
+    genres: item.genres,
+    runtime: item.runtime,
   });
 }
 

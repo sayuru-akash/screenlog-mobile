@@ -4,6 +4,7 @@ import { queryKeys } from "@/lib/query-keys";
 import { authedApiRequest } from "@/lib/use-api";
 import type {
   NotificationSettingsPayload,
+  ProviderCatalogPayload,
   ProviderSettingsPayload,
   SettingsPayload,
 } from "@/types/domain";
@@ -59,10 +60,9 @@ export function useProvidersQuery(region?: string | null) {
   return useQuery({
     queryKey: queryKeys.providers(region ?? undefined),
     queryFn: () =>
-      authedApiRequest<{ providers?: Array<{ id: string; name: string }> }>(
-        "/providers",
-        { query: { region } },
-      ),
+      authedApiRequest<ProviderCatalogPayload>("/providers", {
+        query: { region },
+      }),
   });
 }
 

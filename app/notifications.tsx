@@ -23,6 +23,7 @@ export default function NotificationsScreen() {
   const items = notifications.data?.items ?? [];
   return (
     <Screen
+      back
       title="Notifications"
       subtitle={`${notifications.data?.unreadCount ?? 0} unread`}
     >

@@ -1,29 +1,35 @@
 import { useColorScheme } from "react-native";
+import { create } from "zustand";
+import type { ThemePreference } from "@/types/domain";
 
 export const palette = {
   light: {
-    background: "#F7F7F4",
+    background: "#FAFAFA",
     surface: "#FFFFFF",
-    surfaceMuted: "#ECEFEA",
-    text: "#151816",
-    muted: "#626A64",
-    faint: "#8A928C",
-    border: "#DDE3DD",
-    accent: "#1F7A5B",
-    accentSoft: "#DCEDE5",
+    surfaceMuted: "#EEEEEE",
+    text: "#171717",
+    muted: "#666666",
+    faint: "#999999",
+    border: "#E5E5E5",
+    accent: "#8B5CF6",
+    accentSoft: "#EEE7FF",
+    success: "#16A34A",
+    successSoft: "#DCFCE7",
     danger: "#B42318",
     warning: "#A15C07",
   },
   dark: {
-    background: "#101412",
-    surface: "#171D1A",
-    surfaceMuted: "#202822",
-    text: "#F2F5F1",
-    muted: "#B9C1BB",
-    faint: "#869088",
-    border: "#2B352F",
-    accent: "#62C99A",
-    accentSoft: "#183B2D",
+    background: "#0A0A0A",
+    surface: "#121212",
+    surfaceMuted: "#1F1F1F",
+    text: "#F2F2F2",
+    muted: "#A3A3A3",
+    faint: "#737373",
+    border: "#242424",
+    accent: "#8B5CF6",
+    accentSoft: "#24163F",
+    success: "#22C55E",
+    successSoft: "#12311F",
     danger: "#FFB4AB",
     warning: "#FFD08A",
   },
@@ -44,11 +50,28 @@ export const radius = {
   lg: 18,
 } as const;
 
+type ThemeStore = {
+  preference: ThemePreference;
+  setPreference: (preference: ThemePreference) => void;
+};
+
+export const useThemePreferenceStore = create<ThemeStore>((set) => ({
+  preference: "system",
+  setPreference: (preference) => set({ preference }),
+}));
+
 export function useTheme() {
   const scheme = useColorScheme();
-  const mode = scheme === "dark" ? "dark" : "light";
+  const preference = useThemePreferenceStore((state) => state.preference);
+  const mode =
+    preference === "system"
+      ? scheme === "dark"
+        ? "dark"
+        : "light"
+      : preference;
   return {
     mode,
+    preference,
     colors: palette[mode],
     spacing,
     radius,

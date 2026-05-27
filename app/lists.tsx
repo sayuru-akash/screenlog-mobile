@@ -1,10 +1,11 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 import { Modal, Switch, TextInput } from "react-native";
 import { X } from "lucide-react-native";
 import { Button } from "@/components/primitives/Button";
 import { Screen } from "@/components/primitives/Screen";
+import { ProfileListGrid } from "@/components/profile/ProfileSurface";
 import {
   EmptyState,
   ErrorState,
@@ -29,6 +30,7 @@ export default function ListsScreen() {
   const items = lists.data?.lists ?? [];
   return (
     <Screen
+      back
       title="Lists"
       subtitle="Ranked collections and notes."
       right={
@@ -47,30 +49,7 @@ export default function ListsScreen() {
       {!lists.isLoading && !items.length ? (
         <EmptyState title="No lists yet" />
       ) : null}
-      <View style={{ gap: theme.spacing.md }}>
-        {items.map((list) => (
-          <Pressable
-            key={list.id}
-            accessibilityRole="button"
-            accessibilityLabel={`Open ${list.title}`}
-            onPress={() => router.push(`/list/${list.id}`)}
-            style={({ pressed }) => ({
-              borderRadius: theme.radius.sm,
-              borderWidth: 1,
-              borderColor: theme.colors.border,
-              padding: theme.spacing.lg,
-              backgroundColor: theme.colors.surface,
-              opacity: pressed ? 0.72 : 1,
-              gap: theme.spacing.xs,
-            })}
-          >
-            <AppText variant="label">{list.title}</AppText>
-            <AppText muted>
-              {list.description || `${list.count ?? 0} titles`}
-            </AppText>
-          </Pressable>
-        ))}
-      </View>
+      <ProfileListGrid lists={items} />
       <Modal
         visible={open}
         animationType="slide"

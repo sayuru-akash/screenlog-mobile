@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams } from "expo-router";
+import { Image } from "expo-image";
 import { useState } from "react";
-import { Alert, Modal, Switch, TextInput, View } from "react-native";
-import { Pencil, Pin, Trash2, X } from "lucide-react-native";
+import { Alert, Modal, Pressable, Switch, TextInput, View } from "react-native";
+import { Pencil, Pin, X } from "lucide-react-native";
 import { Button } from "@/components/primitives/Button";
 import { Screen } from "@/components/primitives/Screen";
 import {
@@ -45,6 +46,16 @@ export default function ListDetailScreen() {
   const search = useSearchQuery(q, "all");
   const items = toDisplayListItems(list.data?.items ?? []);
   const canEdit = Boolean(list.data?.canEdit);
+  const hasSearchResult = (result: {
+    type: string;
+    tmdbId?: number;
+    title: string;
+  }) =>
+    items.some((item) => {
+      if (item.type !== result.type) return false;
+      if (item.tmdbId && result.tmdbId) return item.tmdbId === result.tmdbId;
+      return item.title.toLowerCase() === result.title.toLowerCase();
+    });
   const openEdit = () => {
     setTitle(list.data?.title ?? "");
     setDescription(list.data?.description ?? "");
@@ -68,6 +79,7 @@ export default function ListDetailScreen() {
   };
   return (
     <Screen
+      back
       title={list.data?.title || "List"}
       subtitle={list.data?.description || undefined}
       right={
@@ -98,29 +110,139 @@ export default function ListDetailScreen() {
           onRetry={() => void list.refetch()}
         />
       ) : null}
+      {list.data ? (
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            borderRadius: theme.radius.md,
+            backgroundColor: theme.colors.surface,
+            padding: theme.spacing.lg,
+            gap: theme.spacing.sm,
+          }}
+        >
+          <AppText variant="caption" muted>
+            {list.data.visibility?.toLowerCase() ?? "private"} · {items.length}{" "}
+            titles
+            {list.data.ranked ? " · ranked" : ""}
+          </AppText>
+          {list.data.tags?.length ? (
+            <View
+              style={{
+                flexDirection: "row",
+                flexWrap: "wrap",
+                gap: theme.spacing.sm,
+              }}
+            >
+              {list.data.tags.map((tag) => (
+                <View
+                  key={tag}
+                  style={{
+                    borderRadius: 999,
+                    backgroundColor: theme.colors.surfaceMuted,
+                    paddingHorizontal: theme.spacing.md,
+                    paddingVertical: theme.spacing.xs,
+                  }}
+                >
+                  <AppText variant="caption">{tag}</AppText>
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
       {!list.isLoading && !items.length ? (
         <EmptyState title="No list items" />
       ) : null}
-      <View style={{ gap: theme.spacing.md }}>
+      <View
+        style={{
+          flexDirection: "row",
+          flexWrap: "wrap",
+          gap: theme.spacing.md,
+        }}
+      >
         {items.map((item) => (
           <View
             key={item.id}
-            style={{
-              flexDirection: "row",
-              gap: theme.spacing.md,
-              alignItems: "center",
-            }}
+            style={{ width: "47%", flexGrow: 1, maxWidth: 190 }}
           >
-            <AppText variant="heading" muted>
-              {item.displayPosition}
-            </AppText>
-            <View style={{ flex: 1 }}>
-              <AppText variant="label">{item.title}</AppText>
-              {item.note ? <AppText muted>{item.note}</AppText> : null}
-            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Open ${item.title}`}
+              onPress={() =>
+                router.push(
+                  item.type === "movie" && item.movieId
+                    ? `/movie/${item.movieId}`
+                    : `/show/${item.showId}`,
+                )
+              }
+              style={({ pressed }) => ({
+                gap: theme.spacing.sm,
+                opacity: pressed ? 0.72 : 1,
+              })}
+            >
+              <View
+                style={{
+                  aspectRatio: 2 / 3,
+                  borderRadius: theme.radius.md,
+                  backgroundColor: theme.colors.surfaceMuted,
+                  overflow: "hidden",
+                }}
+              >
+                {item.posterUrl ? (
+                  <Image
+                    source={{ uri: item.posterUrl }}
+                    style={{ width: "100%", height: "100%" }}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <View
+                    style={{
+                      flex: 1,
+                      justifyContent: "flex-end",
+                      padding: theme.spacing.md,
+                    }}
+                  >
+                    <AppText variant="label">{item.title}</AppText>
+                  </View>
+                )}
+              </View>
+              <View
+                style={{
+                  flexDirection: "row",
+                  gap: theme.spacing.sm,
+                  alignItems: "flex-start",
+                }}
+              >
+                {list.data?.ranked ? (
+                  <View
+                    style={{
+                      borderRadius: theme.radius.sm,
+                      backgroundColor: theme.colors.surfaceMuted,
+                      paddingHorizontal: theme.spacing.sm,
+                      paddingVertical: 2,
+                    }}
+                  >
+                    <AppText variant="caption" muted>
+                      {item.displayPosition}
+                    </AppText>
+                  </View>
+                ) : null}
+                <View style={{ flex: 1 }}>
+                  <AppText variant="label" numberOfLines={2}>
+                    {item.title}
+                  </AppText>
+                  {item.note ? (
+                    <AppText variant="caption" muted numberOfLines={2}>
+                      {item.note}
+                    </AppText>
+                  ) : null}
+                </View>
+              </View>
+            </Pressable>
             {canEdit ? (
-              <IconButton
-                label={`Remove ${item.title}`}
+              <Button
+                variant="danger"
                 onPress={() =>
                   Alert.alert(
                     "Remove title?",
@@ -136,8 +258,8 @@ export default function ListDetailScreen() {
                   )
                 }
               >
-                <Trash2 size={18} color={theme.colors.danger} />
-              </IconButton>
+                Remove
+              </Button>
             ) : null}
           </View>
         ))}
@@ -269,28 +391,32 @@ export default function ListDetailScreen() {
             <ErrorState message={addItem.error.message} />
           ) : null}
           <View style={{ gap: theme.spacing.md }}>
-            {search.data?.results?.map((item) => (
-              <TitleRow
-                key={`${item.type}-${item.id || item.tmdbId}`}
-                item={item}
-                right={
-                  <Button
-                    variant="secondary"
-                    loading={addItem.isPending}
-                    onPress={() =>
-                      addItem.mutate(item, {
-                        onSuccess: () => {
-                          setAddOpen(false);
-                          setQ("");
-                        },
-                      })
-                    }
-                  >
-                    Add
-                  </Button>
-                }
-              />
-            ))}
+            {search.data?.results?.map((item) => {
+              const alreadyAdded = hasSearchResult(item);
+              return (
+                <TitleRow
+                  key={`${item.type}-${item.id || item.tmdbId}`}
+                  item={item}
+                  right={
+                    <Button
+                      variant={alreadyAdded ? "ghost" : "secondary"}
+                      loading={addItem.isPending}
+                      disabled={alreadyAdded}
+                      onPress={() =>
+                        addItem.mutate(item, {
+                          onSuccess: () => {
+                            setAddOpen(false);
+                            setQ("");
+                          },
+                        })
+                      }
+                    >
+                      {alreadyAdded ? "Added" : "Add"}
+                    </Button>
+                  }
+                />
+              );
+            })}
           </View>
         </Screen>
       </Modal>
