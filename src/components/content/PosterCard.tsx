@@ -2,17 +2,34 @@ import { Pressable, View } from "react-native";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { AppText } from "@/components/primitives/Text";
+import { useLookupTitleMutation } from "@/features/search/queries";
 import { useTheme } from "@/lib/theme";
 import type { TitleSummary } from "@/types/domain";
 
-export function PosterCard({ item, compact = false }: { item: TitleSummary; compact?: boolean }) {
+export function PosterCard({
+  item,
+  compact = false,
+}: {
+  item: TitleSummary;
+  compact?: boolean;
+}) {
   const theme = useTheme();
+  const lookup = useLookupTitleMutation();
   const href = `/${item.type}/${item.id}` as const;
+  const openTitle = () => {
+    if (!item.tmdbId) {
+      router.push(href);
+      return;
+    }
+    lookup.mutate(item, {
+      onSuccess: (payload) => router.push(`/${payload.type}/${payload.id}`),
+    });
+  };
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`Open ${item.title}`}
-      onPress={() => router.push(href)}
+      onPress={openTitle}
       style={({ pressed }) => ({
         width: compact ? 132 : 164,
         opacity: pressed ? 0.75 : 1,
@@ -28,9 +45,19 @@ export function PosterCard({ item, compact = false }: { item: TitleSummary; comp
         }}
       >
         {item.posterUrl ? (
-          <Image source={{ uri: item.posterUrl }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+          <Image
+            source={{ uri: item.posterUrl }}
+            style={{ width: "100%", height: "100%" }}
+            contentFit="cover"
+          />
         ) : (
-          <View style={{ flex: 1, padding: theme.spacing.md, justifyContent: "flex-end" }}>
+          <View
+            style={{
+              flex: 1,
+              padding: theme.spacing.md,
+              justifyContent: "flex-end",
+            }}
+          >
             <AppText variant="label">{item.title}</AppText>
           </View>
         )}
@@ -40,7 +67,12 @@ export function PosterCard({ item, compact = false }: { item: TitleSummary; comp
           {item.title}
         </AppText>
         <AppText variant="caption" muted numberOfLines={1}>
-          {item.progressLabel || item.nextLabel || item.runtimeLabel || item.year || item.status || "Watchlog"}
+          {item.progressLabel ||
+            item.nextLabel ||
+            item.runtimeLabel ||
+            item.year ||
+            item.status ||
+            "Watchlog"}
         </AppText>
       </View>
     </Pressable>

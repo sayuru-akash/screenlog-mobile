@@ -47,7 +47,11 @@ export default function ResetPasswordScreen() {
           }}
         />
         {message ? <AppText muted>{message}</AppText> : null}
-        <Button loading={loading} disabled={!token || password.length < 8} onPress={() => void submit()}>
+        <Button
+          loading={loading}
+          disabled={!token || password.length < 8}
+          onPress={() => void submit()}
+        >
           Save Password
         </Button>
       </View>

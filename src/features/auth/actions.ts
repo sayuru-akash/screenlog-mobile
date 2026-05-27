@@ -2,13 +2,25 @@ import { authClient } from "@/lib/auth-client";
 
 type AuthResult = { error?: { message?: string } | null };
 type AuthApi = {
-  signIn?: { email?: (input: { email: string; password: string }) => Promise<AuthResult> };
+  signIn?: {
+    email?: (input: { email: string; password: string }) => Promise<AuthResult>;
+  };
   signUp?: {
-    email?: (input: { email: string; password: string; name: string }) => Promise<AuthResult>;
+    email?: (input: {
+      email: string;
+      password: string;
+      name: string;
+    }) => Promise<AuthResult>;
   };
   signOut?: () => Promise<AuthResult>;
-  requestPasswordReset?: (input: { email: string; redirectTo?: string }) => Promise<AuthResult>;
-  resetPassword?: (input: { newPassword: string; token: string }) => Promise<AuthResult>;
+  requestPasswordReset?: (input: {
+    email: string;
+    redirectTo?: string;
+  }) => Promise<AuthResult>;
+  resetPassword?: (input: {
+    newPassword: string;
+    token: string;
+  }) => Promise<AuthResult>;
   deleteUser?: () => Promise<AuthResult>;
 };
 
@@ -19,7 +31,11 @@ export async function signInWithEmail(email: string, password: string) {
   throwIfAuthError(result);
 }
 
-export async function signUpWithEmail(name: string, email: string, password: string) {
+export async function signUpWithEmail(
+  name: string,
+  email: string,
+  password: string,
+) {
   const result = await api.signUp?.email?.({ name, email, password });
   throwIfAuthError(result);
 }
@@ -45,5 +61,6 @@ export async function requestAccountDeletion() {
 }
 
 function throwIfAuthError(result: AuthResult | undefined) {
-  if (result?.error) throw new Error(result.error.message || "Authentication failed");
+  if (result?.error)
+    throw new Error(result.error.message || "Authentication failed");
 }

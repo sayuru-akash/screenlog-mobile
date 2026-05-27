@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { apiRequest, buildApiUrl, createApiHeaders, getPublicConfig } from "./api-client";
+import {
+  apiRequest,
+  buildApiUrl,
+  createApiHeaders,
+  getPublicConfig,
+} from "./api-client";
 
 describe("getPublicConfig", () => {
   it("normalizes the backend origin and app scheme", () => {
@@ -17,7 +22,9 @@ describe("getPublicConfig", () => {
   });
 
   it("rejects missing backend origins", () => {
-    expect(() => getPublicConfig({ EXPO_PUBLIC_API_ORIGIN: "" })).toThrow("EXPO_PUBLIC_API_ORIGIN");
+    expect(() => getPublicConfig({ EXPO_PUBLIC_API_ORIGIN: "" })).toThrow(
+      "EXPO_PUBLIC_API_ORIGIN",
+    );
   });
 });
 
@@ -39,7 +46,9 @@ describe("buildApiUrl", () => {
 
 describe("createApiHeaders", () => {
   it("adds the required mobile compatibility header and cookie", () => {
-    expect(createApiHeaders({ cookie: "watchlog.session=value" })).toMatchObject({
+    expect(
+      createApiHeaders({ cookie: "watchlog.session=value" }),
+    ).toMatchObject({
       Accept: "application/json",
       Cookie: "watchlog.session=value",
       "x-watchlog-client": "watchlog-mobile",
@@ -56,9 +65,15 @@ describe("createApiHeaders", () => {
 
 describe("apiRequest", () => {
   it("uses credentials omit and parses JSON responses", async () => {
-    const fetcher = vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 })));
+    const fetcher = vi.fn(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ ok: true }), { status: 200 }),
+      ),
+    );
 
-    await expect(apiRequest("/health", { fetcher })).resolves.toEqual({ ok: true });
+    await expect(apiRequest("/health", { fetcher })).resolves.toEqual({
+      ok: true,
+    });
     expect(fetcher).toHaveBeenCalledWith(
       "http://localhost:5173/api/v1/health",
       expect.objectContaining({ credentials: "omit" }),
@@ -66,8 +81,12 @@ describe("apiRequest", () => {
   });
 
   it("throws safe ApiError values for server errors", async () => {
-    const fetcher = vi.fn(
-      () => Promise.resolve(new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 })),
+    const fetcher = vi.fn(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+        }),
+      ),
     );
 
     await expect(apiRequest("/watchlist", { fetcher })).rejects.toMatchObject({

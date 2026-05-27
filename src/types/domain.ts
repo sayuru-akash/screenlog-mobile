@@ -20,6 +20,7 @@ export type ProviderSummary = {
 export type TitleSummary = {
   id: string;
   type: MediaType;
+  tmdbId?: number;
   title: string;
   year?: string | number | null;
   overview?: string | null;
@@ -65,10 +66,13 @@ export type WatchlistPayload = {
 
 export type CalendarItem = {
   id: string;
+  episodeId?: string | null;
+  showId?: string | null;
   title: string;
   episodeLabel: string;
   airDate?: string | null;
   posterUrl?: string | null;
+  group?: string;
 };
 
 export type NotificationItem = {
@@ -76,6 +80,7 @@ export type NotificationItem = {
   title: string;
   body?: string | null;
   read?: boolean;
+  readAt?: string | null;
   href?: string | null;
   createdAt?: string | null;
 };
@@ -113,6 +118,10 @@ export type ReviewSummary = {
   spoiler?: boolean;
   visibility?: Visibility;
   createdAt?: string | null;
+  reactionScore?: number;
+  userReaction?: number;
+  canEdit?: boolean;
+  replies?: ReviewSummary[];
 };
 
 export type CustomListSummary = {
@@ -122,6 +131,8 @@ export type CustomListSummary = {
   visibility?: Visibility;
   count?: number;
   covers?: string[];
+  canEdit?: boolean;
+  tags?: string[];
 };
 
 export type CustomListDetail = CustomListSummary & {
@@ -130,6 +141,8 @@ export type CustomListDetail = CustomListSummary & {
     id: string;
     title: string;
     type: MediaType;
+    showId?: string;
+    movieId?: string;
     rank?: number | null;
     posterUrl?: string | null;
     note?: string | null;

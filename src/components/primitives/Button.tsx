@@ -1,5 +1,10 @@
 import type { PropsWithChildren } from "react";
-import { ActivityIndicator, Pressable, type PressableProps, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  type PressableProps,
+  View,
+} from "react-native";
 import { AppText } from "./Text";
 import { useTheme } from "@/lib/theme";
 

@@ -20,11 +20,15 @@ describe("buildWatchlistUpdatePayload", () => {
 
 describe("buildProgressPayload", () => {
   it("builds episode, season, caught-up, and reset actions", () => {
-    expect(buildProgressPayload({ action: "watch", episodeId: "ep_1" })).toEqual({
+    expect(
+      buildProgressPayload({ action: "watch", episodeId: "ep_1" }),
+    ).toEqual({
       action: "watch",
       episodeId: "ep_1",
     });
-    expect(buildProgressPayload({ action: "markCaughtUp", showId: "show_1" })).toEqual({
+    expect(
+      buildProgressPayload({ action: "markCaughtUp", showId: "show_1" }),
+    ).toEqual({
       action: "markCaughtUp",
       showId: "show_1",
     });

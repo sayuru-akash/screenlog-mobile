@@ -3,22 +3,37 @@ import { View } from "react-native";
 import { Button } from "@/components/primitives/Button";
 import { Screen } from "@/components/primitives/Screen";
 import { Section } from "@/components/primitives/Section";
-import { EmptyState, ErrorState, LoadingState } from "@/components/primitives/StateViews";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "@/components/primitives/StateViews";
 import { AppText } from "@/components/primitives/Text";
 import { ActivityCalendar } from "@/components/profile/ActivityCalendar";
-import { useFollowMutation, useUserProfileQuery } from "@/features/profile/queries";
+import {
+  useFollowMutation,
+  useUserProfileQuery,
+} from "@/features/profile/queries";
 import { useTheme } from "@/lib/theme";
 
 export default function UserProfileScreen() {
   const theme = useTheme();
   const { username } = useLocalSearchParams<{ username: string }>();
   const profile = useUserProfileQuery(username);
-  const follow = useFollowMutation(username, Boolean(profile.data?.isFollowing));
+  const follow = useFollowMutation(
+    username,
+    Boolean(profile.data?.isFollowing),
+  );
   const user = profile.data?.user;
   return (
     <Screen title={user?.name || username} subtitle={`@${username}`}>
       {profile.isLoading ? <LoadingState label="Loading profile" /> : null}
-      {profile.isError ? <ErrorState message={profile.error.message} onRetry={() => void profile.refetch()} /> : null}
+      {profile.isError ? (
+        <ErrorState
+          message={profile.error.message}
+          onRetry={() => void profile.refetch()}
+        />
+      ) : null}
       {profile.data ? (
         <>
           <AppText muted>{user?.bio || "Visible Watchlog profile."}</AppText>

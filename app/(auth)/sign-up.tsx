@@ -29,13 +29,31 @@ export default function SignUpScreen() {
   }
 
   return (
-    <Screen title="Create account" subtitle="Use the same Watchlog account everywhere.">
+    <Screen
+      title="Create account"
+      subtitle="Use the same Watchlog account everywhere."
+    >
       <View style={{ gap: theme.spacing.md }}>
         <Input label="Name" value={name} onChangeText={setName} />
-        <Input label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-        <Input label="Password" value={password} onChangeText={setPassword} secureTextEntry />
+        <Input
+          label="Email"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+        <Input
+          label="Password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
         {message ? <AppText muted>{message}</AppText> : null}
-        <Button loading={loading} disabled={!name || !email || password.length < 8} onPress={() => void submit()}>
+        <Button
+          loading={loading}
+          disabled={!name || !email || password.length < 8}
+          onPress={() => void submit()}
+        >
           Sign Up
         </Button>
         <Link href="/(auth)/sign-in" asChild>
@@ -49,7 +67,9 @@ export default function SignUpScreen() {
   );
 }
 
-function Input(props: React.ComponentProps<typeof TextInput> & { label: string }) {
+function Input(
+  props: React.ComponentProps<typeof TextInput> & { label: string },
+) {
   const theme = useTheme();
   const { label, ...inputProps } = props;
   return (

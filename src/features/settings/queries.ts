@@ -1,12 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { authedApiRequest } from "@/lib/use-api";
-import type { NotificationSettingsPayload, ProviderSettingsPayload, SettingsPayload } from "@/types/domain";
+import type {
+  NotificationSettingsPayload,
+  ProviderSettingsPayload,
+  SettingsPayload,
+} from "@/types/domain";
 
 export function useSettingsQuery() {
   return useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => authedApiRequest<{ preferences?: SettingsPayload }>("/settings"),
+    queryFn: () =>
+      authedApiRequest<{ preferences?: SettingsPayload }>("/settings"),
   });
 }
 
@@ -28,7 +33,8 @@ export function useSaveSettingsMutation() {
 export function useNotificationSettingsQuery() {
   return useQuery({
     queryKey: ["notification-settings"],
-    queryFn: () => authedApiRequest<NotificationSettingsPayload>("/notification-settings"),
+    queryFn: () =>
+      authedApiRequest<NotificationSettingsPayload>("/notification-settings"),
   });
 }
 
@@ -41,7 +47,9 @@ export function useSaveNotificationSettingsMutation() {
         body: settings,
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["notification-settings"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["notification-settings"],
+      });
     },
   });
 }
@@ -49,7 +57,11 @@ export function useSaveNotificationSettingsMutation() {
 export function useProvidersQuery(region?: string | null) {
   return useQuery({
     queryKey: queryKeys.providers(region ?? undefined),
-    queryFn: () => authedApiRequest<{ providers?: Array<{ id: string; name: string }> }>("/providers", { query: { region } }),
+    queryFn: () =>
+      authedApiRequest<{ providers?: Array<{ id: string; name: string }> }>(
+        "/providers",
+        { query: { region } },
+      ),
   });
 }
 

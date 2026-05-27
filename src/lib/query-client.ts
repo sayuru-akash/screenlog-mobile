@@ -7,7 +7,10 @@ export function createWatchlogQueryClient() {
         staleTime: 60_000,
         gcTime: 1000 * 60 * 60 * 6,
         retry: (failureCount, error) => {
-          const status = typeof error === "object" && error && "status" in error ? error.status : null;
+          const status =
+            typeof error === "object" && error && "status" in error
+              ? error.status
+              : null;
           if (status === 401 || status === 403 || status === 404) return false;
           return failureCount < 2;
         },

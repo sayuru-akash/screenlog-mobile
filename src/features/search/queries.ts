@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { mapSearchPayload } from "@/lib/api-mappers";
 import { queryKeys } from "@/lib/query-keys";
 import { authedApiRequest } from "@/lib/use-api";
 import type { MediaType, SearchResult } from "@/types/domain";
@@ -7,10 +8,12 @@ export function useSearchQuery(q: string, type: "all" | MediaType) {
   return useQuery({
     queryKey: queryKeys.search({ q, type }),
     enabled: q.trim().length >= 2,
-    queryFn: () =>
-      authedApiRequest<{ results?: SearchResult[] }>("/search", {
-        query: { q: q.trim(), type: type === "all" ? undefined : type },
-      }),
+    queryFn: async (): Promise<{ results?: SearchResult[] }> =>
+      mapSearchPayload(
+        await authedApiRequest("/search", {
+          query: { q: q.trim(), type: type === "all" ? undefined : type },
+        }),
+      ),
   });
 }
 
@@ -35,5 +38,18 @@ export function useAddToWatchlistMutation() {
       await queryClient.invalidateQueries({ queryKey: ["watchlist"] });
       await queryClient.invalidateQueries({ queryKey: ["home"] });
     },
+  });
+}
+
+export function useLookupTitleMutation() {
+  return useMutation({
+    mutationFn: (item: SearchResult) =>
+      authedApiRequest<{ id: string; type: MediaType }>("/lookup", {
+        method: "POST",
+        body: {
+          type: item.type,
+          tmdbId: item.tmdbId,
+        },
+      }),
   });
 }

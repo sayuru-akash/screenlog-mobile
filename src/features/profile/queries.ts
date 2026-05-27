@@ -26,7 +26,9 @@ export function useFollowMutation(username: string, following: boolean) {
         body: following ? undefined : {},
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.user(username) });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.user(username),
+      });
       await queryClient.invalidateQueries({ queryKey: queryKeys.feed });
     },
   });

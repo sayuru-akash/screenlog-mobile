@@ -3,7 +3,9 @@ import { queryKeys, stableParams } from "./query-keys";
 
 describe("stableParams", () => {
   it("drops empty values and sorts keys for stable cache identities", () => {
-    expect(stableParams({ q: "Inception", page: 1, empty: "", none: null })).toEqual({
+    expect(
+      stableParams({ q: "Inception", page: 1, empty: "", none: null }),
+    ).toEqual({
       page: 1,
       q: "Inception",
     });

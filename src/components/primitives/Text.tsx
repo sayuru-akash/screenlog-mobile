@@ -8,7 +8,13 @@ type AppTextProps = TextProps &
     muted?: boolean;
   }>;
 
-export function AppText({ variant = "body", muted, style, children, ...props }: AppTextProps) {
+export function AppText({
+  variant = "body",
+  muted,
+  style,
+  children,
+  ...props
+}: AppTextProps) {
   const theme = useTheme();
   const sizes = {
     title: { fontSize: 34, lineHeight: 40, fontWeight: "700" as const },

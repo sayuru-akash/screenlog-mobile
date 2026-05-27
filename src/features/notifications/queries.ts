@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { mapNotificationsPayload } from "@/lib/api-mappers";
 import { queryKeys } from "@/lib/query-keys";
 import { authedApiRequest } from "@/lib/use-api";
 import type { NotificationItem } from "@/types/domain";
@@ -6,7 +7,10 @@ import type { NotificationItem } from "@/types/domain";
 export function useNotificationsQuery() {
   return useQuery({
     queryKey: queryKeys.notifications,
-    queryFn: () => authedApiRequest<{ items?: NotificationItem[]; unreadCount?: number }>("/notifications"),
+    queryFn: async (): Promise<{
+      items?: NotificationItem[];
+      unreadCount?: number;
+    }> => mapNotificationsPayload(await authedApiRequest("/notifications")),
   });
 }
 
@@ -19,7 +23,9 @@ export function useMarkNotificationsReadMutation() {
         body: ids ? { ids } : {},
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.notifications,
+      });
     },
   });
 }

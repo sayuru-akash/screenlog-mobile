@@ -1,4 +1,8 @@
-import { useMutation, useQueryClient, type UseMutationOptions } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  type UseMutationOptions,
+} from "@tanstack/react-query";
 import NetInfo from "@react-native-community/netinfo";
 import { apiRequest, type ApiRequestOptions } from "./api-client";
 import { getAuthCookie } from "./auth-client";
@@ -19,9 +23,10 @@ export async function authedApiRequest<TResponse>(
   });
 }
 
-export function useApiMutation<TResponse, TVariables extends { path: string; body?: unknown }>(
-  options?: UseMutationOptions<TResponse, Error, TVariables>,
-) {
+export function useApiMutation<
+  TResponse,
+  TVariables extends { path: string; body?: unknown },
+>(options?: UseMutationOptions<TResponse, Error, TVariables>) {
   const queryClient = useQueryClient();
   return useMutation({
     ...options,

@@ -86,7 +86,9 @@ export function useCreateReviewMutation(type: MediaType, titleId: string) {
       }),
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.title(type, titleId) }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.title(type, titleId),
+        }),
         queryClient.invalidateQueries({ queryKey: ["profile"] }),
         queryClient.invalidateQueries({ queryKey: ["feed"] }),
       ]);

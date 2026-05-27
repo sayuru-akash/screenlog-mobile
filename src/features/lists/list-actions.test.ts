@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildListCreatePayload, buildListItemPayload } from "./list-actions";
+import {
+  buildListCreatePayload,
+  buildListItemPayload,
+  buildListRemoveItemPayload,
+} from "./list-actions";
 
 describe("buildListCreatePayload", () => {
   it("trims optional fields and lowercases unique tags", () => {
@@ -38,6 +42,33 @@ describe("buildListItemPayload", () => {
       title: "One Piece",
       overview: "Pirates.",
       posterPath: "/poster.jpg",
+    });
+  });
+});
+
+describe("buildListRemoveItemPayload", () => {
+  it("sends the canonical title id for delete requests", () => {
+    expect(
+      buildListRemoveItemPayload({
+        id: "item-1",
+        title: "Dark",
+        type: "show",
+        showId: "show-1",
+      }),
+    ).toEqual({
+      type: "show",
+      showId: "show-1",
+    });
+    expect(
+      buildListRemoveItemPayload({
+        id: "item-2",
+        title: "Heat",
+        type: "movie",
+        movieId: "movie-1",
+      }),
+    ).toEqual({
+      type: "movie",
+      movieId: "movie-1",
     });
   });
 });

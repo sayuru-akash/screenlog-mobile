@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { mapCommentsPayload, mapLogPayload } from "@/lib/api-mappers";
 import { queryKeys } from "@/lib/query-keys";
 import { authedApiRequest } from "@/lib/use-api";
 import type { ReviewSummary } from "@/types/domain";
@@ -6,14 +7,16 @@ import type { ReviewSummary } from "@/types/domain";
 export function useLogQuery(id: string) {
   return useQuery({
     queryKey: queryKeys.log(id),
-    queryFn: () => authedApiRequest<ReviewSummary>(`/logs/${id}`),
+    queryFn: async (): Promise<ReviewSummary> =>
+      mapLogPayload(await authedApiRequest(`/logs/${id}`)),
   });
 }
 
 export function useCommentsQuery(logId: string) {
   return useQuery({
     queryKey: queryKeys.comments(logId),
-    queryFn: () => authedApiRequest<{ comments?: ReviewSummary[] }>(`/logs/${logId}/comments`),
+    queryFn: async (): Promise<{ comments?: ReviewSummary[] }> =>
+      mapCommentsPayload(await authedApiRequest(`/logs/${logId}/comments`)),
   });
 }
 
@@ -31,10 +34,30 @@ export function useReactionMutation(kind: "logs" | "comments", id: string) {
   });
 }
 
+export function useCommentReactionMutation(logId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, value }: { id: string; value: -1 | 0 | 1 }) =>
+      authedApiRequest(`/comments/${id}/reaction`, {
+        method: "POST",
+        body: { value },
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.comments(logId),
+      });
+    },
+  });
+}
+
 export function useCreateCommentMutation(logId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (comment: { body: string; spoiler: boolean; parentId?: string | null }) =>
+    mutationFn: (comment: {
+      body: string;
+      spoiler: boolean;
+      parentId?: string | null;
+    }) =>
       authedApiRequest(`/logs/${logId}/comments`, {
         method: "POST",
         body: {
@@ -44,7 +67,9 @@ export function useCreateCommentMutation(logId: string) {
         },
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.comments(logId) });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.comments(logId),
+      });
       await queryClient.invalidateQueries({ queryKey: queryKeys.log(logId) });
     },
   });
@@ -53,7 +78,11 @@ export function useCreateCommentMutation(logId: string) {
 export function useUpdateLogMutation(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (patch: { rating?: number | null; review?: string | null; spoiler?: boolean }) =>
+    mutationFn: (patch: {
+      rating?: number | null;
+      review?: string | null;
+      spoiler?: boolean;
+    }) =>
       authedApiRequest(`/logs/${id}`, {
         method: "PATCH",
         body: patch,

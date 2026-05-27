@@ -32,7 +32,10 @@ export default function RootLayout() {
             <Stack.Screen name="feed" />
             <Stack.Screen name="lists" />
             <Stack.Screen name="discover" />
-            <Stack.Screen name="onboarding" options={{ presentation: "modal" }} />
+            <Stack.Screen
+              name="onboarding"
+              options={{ presentation: "modal" }}
+            />
           </Stack>
         </SafeAreaProvider>
       </QueryClientProvider>

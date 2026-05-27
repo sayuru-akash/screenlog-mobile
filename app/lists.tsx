@@ -5,7 +5,12 @@ import { Modal, Switch, TextInput } from "react-native";
 import { X } from "lucide-react-native";
 import { Button } from "@/components/primitives/Button";
 import { Screen } from "@/components/primitives/Screen";
-import { EmptyState, ErrorState, IconButton, LoadingState } from "@/components/primitives/StateViews";
+import {
+  EmptyState,
+  ErrorState,
+  IconButton,
+  LoadingState,
+} from "@/components/primitives/StateViews";
 import { AppText } from "@/components/primitives/Text";
 import { useCreateListMutation, useListsQuery } from "@/features/lists/queries";
 import { useTheme } from "@/lib/theme";
@@ -33,8 +38,15 @@ export default function ListsScreen() {
       }
     >
       {lists.isLoading ? <LoadingState label="Loading lists" /> : null}
-      {lists.isError ? <ErrorState message={lists.error.message} onRetry={() => void lists.refetch()} /> : null}
-      {!lists.isLoading && !items.length ? <EmptyState title="No lists yet" /> : null}
+      {lists.isError ? (
+        <ErrorState
+          message={lists.error.message}
+          onRetry={() => void lists.refetch()}
+        />
+      ) : null}
+      {!lists.isLoading && !items.length ? (
+        <EmptyState title="No lists yet" />
+      ) : null}
       <View style={{ gap: theme.spacing.md }}>
         {items.map((list) => (
           <Pressable
@@ -53,11 +65,18 @@ export default function ListsScreen() {
             })}
           >
             <AppText variant="label">{list.title}</AppText>
-            <AppText muted>{list.description || `${list.count ?? 0} titles`}</AppText>
+            <AppText muted>
+              {list.description || `${list.count ?? 0} titles`}
+            </AppText>
           </Pressable>
         ))}
       </View>
-      <Modal visible={open} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setOpen(false)}>
+      <Modal
+        visible={open}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setOpen(false)}
+      >
         <Screen
           title="New list"
           subtitle="Keep it short and useful."
@@ -68,20 +87,48 @@ export default function ListsScreen() {
           }
         >
           <Input label="Title" value={title} onChangeText={setTitle} />
-          <Input label="Description" value={description} onChangeText={setDescription} multiline />
-          <Input label="Tags" value={tags} onChangeText={setTags} placeholder="thriller, comfort" />
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <Input
+            label="Description"
+            value={description}
+            onChangeText={setDescription}
+            multiline
+          />
+          <Input
+            label="Tags"
+            value={tags}
+            onChangeText={setTags}
+            placeholder="thriller, comfort"
+          />
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <AppText>Ranked</AppText>
             <Switch value={ranked} onValueChange={setRanked} />
           </View>
           <View style={{ flexDirection: "row", gap: theme.spacing.sm }}>
             {(["PRIVATE", "FOLLOWERS", "PUBLIC"] as const).map((option) => (
-              <Button key={option} variant={visibility === option ? "primary" : "ghost"} onPress={() => setVisibility(option)}>
-                {option === "PRIVATE" ? "Private" : option === "FOLLOWERS" ? "Followers" : "Public"}
+              <Button
+                key={option}
+                variant={visibility === option ? "primary" : "ghost"}
+                onPress={() => setVisibility(option)}
+              >
+                {option === "PRIVATE"
+                  ? "Private"
+                  : option === "FOLLOWERS"
+                    ? "Followers"
+                    : "Public"}
               </Button>
             ))}
           </View>
-          {createList.isError ? <AppText style={{ color: theme.colors.danger }}>{createList.error.message}</AppText> : null}
+          {createList.isError ? (
+            <AppText style={{ color: theme.colors.danger }}>
+              {createList.error.message}
+            </AppText>
+          ) : null}
           <Button
             loading={createList.isPending}
             disabled={!title.trim()}
@@ -94,7 +141,8 @@ export default function ListsScreen() {
                     setTitle("");
                     setDescription("");
                     setTags("");
-                    if (payload.list?.id) router.push(`/list/${payload.list.id}`);
+                    if (payload.list?.id)
+                      router.push(`/list/${payload.list.id}`);
                   },
                 },
               )
@@ -108,7 +156,9 @@ export default function ListsScreen() {
   );
 }
 
-function Input(props: React.ComponentProps<typeof TextInput> & { label: string }) {
+function Input(
+  props: React.ComponentProps<typeof TextInput> & { label: string },
+) {
   const theme = useTheme();
   const { label, ...inputProps } = props;
   return (

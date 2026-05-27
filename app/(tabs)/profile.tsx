@@ -4,7 +4,12 @@ import { View } from "react-native";
 import { Button } from "@/components/primitives/Button";
 import { Screen } from "@/components/primitives/Screen";
 import { Section } from "@/components/primitives/Section";
-import { EmptyState, ErrorState, IconButton, LoadingState } from "@/components/primitives/StateViews";
+import {
+  EmptyState,
+  ErrorState,
+  IconButton,
+  LoadingState,
+} from "@/components/primitives/StateViews";
 import { AppText } from "@/components/primitives/Text";
 import { ActivityCalendar } from "@/components/profile/ActivityCalendar";
 import { TitleRail } from "@/components/content/TitleRail";
@@ -20,7 +25,9 @@ export default function ProfileScreen() {
   return (
     <Screen
       title="Profile"
-      subtitle={user?.username ? `@${user.username}` : "Your Watchlog identity."}
+      subtitle={
+        user?.username ? `@${user.username}` : "Your Watchlog identity."
+      }
       right={
         <IconButton label="Settings" onPress={() => router.push("/settings")}>
           <Settings size={20} color={theme.colors.text} />
@@ -28,10 +35,21 @@ export default function ProfileScreen() {
       }
     >
       {profile.isLoading ? <LoadingState label="Loading profile" /> : null}
-      {profile.isError ? <ErrorState message={profile.error.message} onRetry={() => void profile.refetch()} /> : null}
+      {profile.isError ? (
+        <ErrorState
+          message={profile.error.message}
+          onRetry={() => void profile.refetch()}
+        />
+      ) : null}
       {!profile.isLoading && !profile.isError ? (
         <>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.md }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: theme.spacing.md,
+            }}
+          >
             <View
               style={{
                 width: 68,
@@ -58,7 +76,12 @@ export default function ProfileScreen() {
             <Button variant="ghost" onPress={() => router.push("/feed")}>
               Feed
             </Button>
-            <Button variant="danger" onPress={() => void signOut().then(() => router.replace("/(auth)/sign-in"))}>
+            <Button
+              variant="danger"
+              onPress={() =>
+                void signOut().then(() => router.replace("/(auth)/sign-in"))
+              }
+            >
               Sign Out
             </Button>
           </View>
@@ -66,7 +89,10 @@ export default function ProfileScreen() {
             <ActivityCalendar days={profile.data?.calendar} />
           </Section>
           <Section title="Pinned">
-            <TitleRail items={profile.data?.pinned} empty="Pin up to three titles." />
+            <TitleRail
+              items={profile.data?.pinned}
+              empty="Pin up to three titles."
+            />
           </Section>
           <Section title="Stats">
             {profile.data?.stats ? (

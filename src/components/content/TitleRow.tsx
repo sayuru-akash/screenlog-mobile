@@ -6,13 +6,21 @@ import { AppText } from "@/components/primitives/Text";
 import { useTheme } from "@/lib/theme";
 import type { TitleSummary } from "@/types/domain";
 
-export function TitleRow({ item, right }: { item: TitleSummary; right?: React.ReactNode }) {
+export function TitleRow({
+  item,
+  right,
+  onPress,
+}: {
+  item: TitleSummary;
+  right?: React.ReactNode;
+  onPress?: () => void;
+}) {
   const theme = useTheme();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`Open ${item.title}`}
-      onPress={() => router.push(`/${item.type}/${item.id}`)}
+      onPress={onPress ?? (() => router.push(`/${item.type}/${item.id}`))}
       style={({ pressed }) => ({
         minHeight: 76,
         flexDirection: "row",
@@ -30,14 +38,24 @@ export function TitleRow({ item, right }: { item: TitleSummary; right?: React.Re
           overflow: "hidden",
         }}
       >
-        {item.posterUrl ? <Image source={{ uri: item.posterUrl }} style={{ width: "100%", height: "100%" }} /> : null}
+        {item.posterUrl ? (
+          <Image
+            source={{ uri: item.posterUrl }}
+            style={{ width: "100%", height: "100%" }}
+          />
+        ) : null}
       </View>
       <View style={{ flex: 1, gap: 3 }}>
         <AppText variant="label" numberOfLines={1}>
           {item.title}
         </AppText>
         <AppText variant="caption" muted numberOfLines={2}>
-          {item.progressLabel || item.nextLabel || item.runtimeLabel || item.status || item.year || "Watchlog"}
+          {item.progressLabel ||
+            item.nextLabel ||
+            item.runtimeLabel ||
+            item.status ||
+            item.year ||
+            "Watchlog"}
         </AppText>
       </View>
       {right ?? <ChevronRight size={18} color={theme.colors.faint} />}

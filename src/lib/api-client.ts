@@ -35,7 +35,9 @@ export class ApiError extends Error {
 }
 
 export function getPublicConfig(env: EnvLike = process.env): PublicConfig {
-  const apiOrigin = normalizeOrigin(env.EXPO_PUBLIC_API_ORIGIN ?? DEFAULT_API_ORIGIN);
+  const apiOrigin = normalizeOrigin(
+    env.EXPO_PUBLIC_API_ORIGIN ?? DEFAULT_API_ORIGIN,
+  );
   if (!apiOrigin) {
     throw new Error("EXPO_PUBLIC_API_ORIGIN is required");
   }
@@ -47,7 +49,11 @@ export function getPublicConfig(env: EnvLike = process.env): PublicConfig {
   };
 }
 
-export function buildApiUrl(path: string, query?: ApiQuery, config = getPublicConfig()) {
+export function buildApiUrl(
+  path: string,
+  query?: ApiQuery,
+  config = getPublicConfig(),
+) {
   const normalizedPath = normalizeApiPath(path);
   const url = new URL(`/api/v1/${normalizedPath}`, config.apiOrigin);
 
@@ -80,7 +86,15 @@ export function createApiHeaders({
 
 export async function apiRequest<TResponse = unknown>(
   path: string,
-  { method = "GET", query, body, cookie, headers, fetcher = fetch, signal }: ApiRequestOptions = {},
+  {
+    method = "GET",
+    query,
+    body,
+    cookie,
+    headers,
+    fetcher = fetch,
+    signal,
+  }: ApiRequestOptions = {},
 ) {
   const isJsonMutation = method !== "GET" && body !== undefined;
   const response = await fetcher(buildApiUrl(path, query), {
@@ -93,7 +107,8 @@ export async function apiRequest<TResponse = unknown>(
 
   const data = await readJson(response);
   if (!response.ok) {
-    const message = extractErrorMessage(data) ?? (response.statusText || "Request failed");
+    const message =
+      extractErrorMessage(data) ?? (response.statusText || "Request failed");
     throw new ApiError(response.status, message);
   }
 
@@ -115,10 +130,14 @@ function normalizeApiPath(path: string) {
   const trimmed = path.trim();
   if (!trimmed || trimmed === "/") return "";
   if (trimmed.startsWith("/api/")) {
-    throw new Error("Use /api/v1 app data paths through buildApiUrl, not raw /api paths");
+    throw new Error(
+      "Use /api/v1 app data paths through buildApiUrl, not raw /api paths",
+    );
   }
   if (trimmed.startsWith("api/")) {
-    throw new Error("Use /api/v1 app data paths through buildApiUrl, not raw /api paths");
+    throw new Error(
+      "Use /api/v1 app data paths through buildApiUrl, not raw /api paths",
+    );
   }
   return trimmed.replace(/^\/+/, "");
 }
@@ -134,7 +153,8 @@ async function readJson(response: Response) {
 }
 
 function extractErrorMessage(data: unknown) {
-  if (typeof data !== "object" || data === null || !("error" in data)) return null;
+  if (typeof data !== "object" || data === null || !("error" in data))
+    return null;
   const error = (data as { error?: unknown }).error;
   return typeof error === "string" ? error : null;
 }

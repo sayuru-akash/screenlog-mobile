@@ -11,7 +11,14 @@ export function Section({
   const theme = useTheme();
   return (
     <View style={{ gap: theme.spacing.md }}>
-      <View style={{ minHeight: 28, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+      <View
+        style={{
+          minHeight: 28,
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <AppText variant="heading">{title}</AppText>
         {action}
       </View>

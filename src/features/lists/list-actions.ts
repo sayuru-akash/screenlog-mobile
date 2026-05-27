@@ -1,4 +1,8 @@
-import type { SearchResult, Visibility } from "@/types/domain";
+import type {
+  CustomListDetail,
+  SearchResult,
+  Visibility,
+} from "@/types/domain";
 
 export type ListDraft = {
   title: string;
@@ -29,6 +33,16 @@ export function buildListItemPayload(item: SearchResult) {
   });
 }
 
+export function buildListRemoveItemPayload(
+  item: NonNullable<CustomListDetail["items"]>[number],
+) {
+  return compactObject({
+    type: item.type,
+    showId: item.type === "show" ? (item.showId ?? item.id) : undefined,
+    movieId: item.type === "movie" ? (item.movieId ?? item.id) : undefined,
+  });
+}
+
 function parseTags(value: string) {
   return Array.from(
     new Set(
@@ -42,6 +56,8 @@ function parseTags(value: string) {
 
 function compactObject<T extends Record<string, unknown>>(value: T) {
   return Object.fromEntries(
-    Object.entries(value).filter(([, entry]) => entry !== undefined && entry !== ""),
+    Object.entries(value).filter(
+      ([, entry]) => entry !== undefined && entry !== "",
+    ),
   ) as Partial<T>;
 }

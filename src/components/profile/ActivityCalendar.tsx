@@ -3,7 +3,11 @@ import { AppText } from "@/components/primitives/Text";
 import { useTheme } from "@/lib/theme";
 import type { ProfileCalendarDay } from "@/types/domain";
 
-export function ActivityCalendar({ days = [] }: { days?: ProfileCalendarDay[] }) {
+export function ActivityCalendar({
+  days = [],
+}: {
+  days?: ProfileCalendarDay[];
+}) {
   const theme = useTheme();
   const latest = days.slice(-84);
   const max = Math.max(1, ...latest.map((day) => day.total));

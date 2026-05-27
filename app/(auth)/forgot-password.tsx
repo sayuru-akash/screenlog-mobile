@@ -46,7 +46,11 @@ export default function ForgotPasswordScreen() {
           }}
         />
         {message ? <AppText muted>{message}</AppText> : null}
-        <Button loading={loading} disabled={!email} onPress={() => void submit()}>
+        <Button
+          loading={loading}
+          disabled={!email}
+          onPress={() => void submit()}
+        >
           Send Link
         </Button>
         <Link href="/(auth)/sign-in" asChild>

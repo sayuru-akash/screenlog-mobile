@@ -1,4 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
+import {
+  mapTitleDetailPayload,
+  mapTitleExtrasPayload,
+} from "@/lib/api-mappers";
 import { queryKeys } from "@/lib/query-keys";
 import { authedApiRequest } from "@/lib/use-api";
 import type { MediaType, ReviewSummary, TitleSummary } from "@/types/domain";
@@ -21,7 +25,12 @@ export type TitleDetailPayload = TitleSummary & {
 
 export type TitleExtrasPayload = {
   trailers?: Array<{ id: string; title: string; url?: string | null }>;
-  cast?: Array<{ id: string; name: string; role?: string | null; imageUrl?: string | null }>;
+  cast?: Array<{
+    id: string;
+    name: string;
+    role?: string | null;
+    imageUrl?: string | null;
+  }>;
   crew?: Array<{ id: string; name: string; role?: string | null }>;
   related?: TitleSummary[];
 };
@@ -29,14 +38,30 @@ export type TitleExtrasPayload = {
 export function useTitleQuery(type: MediaType, id: string) {
   return useQuery({
     queryKey: queryKeys.title(type, id),
-    queryFn: () => authedApiRequest<TitleDetailPayload>(`/${type === "show" ? "shows" : "movies"}/${id}`),
+    queryFn: async (): Promise<TitleDetailPayload> => {
+      const titlePayload = await authedApiRequest(
+        `/${type === "show" ? "shows" : "movies"}/${id}`,
+      );
+      if (type === "movie") return mapTitleDetailPayload(type, titlePayload);
+      const progressPayload = await authedApiRequest("/progress", {
+        query: { showId: id },
+      });
+      return mapTitleDetailPayload(type, {
+        ...(titlePayload as object),
+        ...(progressPayload as object),
+      });
+    },
   });
 }
 
 export function useTitleExtrasQuery(type: MediaType, id: string) {
   return useQuery({
     queryKey: queryKeys.titleExtras(type, id),
-    queryFn: () =>
-      authedApiRequest<TitleExtrasPayload>(`/${type === "show" ? "shows" : "movies"}/${id}/extras`),
+    queryFn: async (): Promise<TitleExtrasPayload> =>
+      mapTitleExtrasPayload(
+        await authedApiRequest(
+          `/${type === "show" ? "shows" : "movies"}/${id}/extras`,
+        ),
+      ),
   });
 }

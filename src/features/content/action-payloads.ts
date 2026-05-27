@@ -1,4 +1,10 @@
-import type { MediaType, SearchResult, TitleSummary, Visibility, WatchStatus } from "@/types/domain";
+import type {
+  MediaType,
+  SearchResult,
+  TitleSummary,
+  Visibility,
+  WatchStatus,
+} from "@/types/domain";
 
 export type WatchlistUpdateInput = {
   type: MediaType;
@@ -68,7 +74,9 @@ export function buildReviewPayload(draft: ReviewDraft) {
   });
 }
 
-export function titleToWatchlistInput(item: TitleSummary | SearchResult): WatchlistUpdateInput {
+export function titleToWatchlistInput(
+  item: TitleSummary | SearchResult,
+): WatchlistUpdateInput {
   return compactObject({
     type: item.type,
     id: item.id,
@@ -93,6 +101,8 @@ function parseTags(value: string) {
 
 function compactObject<T extends Record<string, unknown>>(value: T) {
   return Object.fromEntries(
-    Object.entries(value).filter(([, entry]) => entry !== undefined && entry !== ""),
+    Object.entries(value).filter(
+      ([, entry]) => entry !== undefined && entry !== "",
+    ),
   ) as Partial<T>;
 }

@@ -7,7 +7,14 @@ import { useTheme } from "@/lib/theme";
 export function LoadingState({ label = "Loading" }: { label?: string }) {
   const theme = useTheme();
   return (
-    <View style={{ minHeight: 120, alignItems: "center", justifyContent: "center", gap: theme.spacing.md }}>
+    <View
+      style={{
+        minHeight: 120,
+        alignItems: "center",
+        justifyContent: "center",
+        gap: theme.spacing.md,
+      }}
+    >
       <ActivityIndicator color={theme.colors.accent} />
       <AppText muted>{label}</AppText>
     </View>
@@ -34,7 +41,13 @@ export function EmptyState({ title, body }: { title: string; body?: string }) {
   );
 }
 
-export function ErrorState({ message, onRetry }: { message?: string; onRetry?: () => void }) {
+export function ErrorState({
+  message,
+  onRetry,
+}: {
+  message?: string;
+  onRetry?: () => void;
+}) {
   const theme = useTheme();
   return (
     <View
@@ -50,7 +63,11 @@ export function ErrorState({ message, onRetry }: { message?: string; onRetry?: (
       <AppText variant="label">Could not load this.</AppText>
       <AppText muted>{message || "Try again in a moment."}</AppText>
       {onRetry ? (
-        <Button variant="secondary" onPress={onRetry} icon={<RefreshCw size={16} color={theme.colors.accent} />}>
+        <Button
+          variant="secondary"
+          onPress={onRetry}
+          icon={<RefreshCw size={16} color={theme.colors.accent} />}
+        >
           Retry
         </Button>
       ) : null}

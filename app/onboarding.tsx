@@ -11,7 +11,9 @@ export default function OnboardingScreen() {
   return (
     <Screen title="Setup" subtitle="Pick the basics now. Change them anytime.">
       <Section title="Region">
-        <AppText muted>Default region is used for streaming availability.</AppText>
+        <AppText muted>
+          Default region is used for streaming availability.
+        </AppText>
         <View style={{ flexDirection: "row", gap: theme.spacing.sm }}>
           {["US", "LK", "GB"].map((region) => (
             <Button key={region} variant="ghost">

@@ -28,12 +28,33 @@ export default function SignInScreen() {
   }
 
   return (
-    <Screen title="Welcome back" subtitle="Sign in to continue tracking." contentStyle={{ flex: 1, justifyContent: "center" }}>
+    <Screen
+      title="Welcome back"
+      subtitle="Sign in to continue tracking."
+      contentStyle={{ flex: 1, justifyContent: "center" }}
+    >
       <View style={{ gap: theme.spacing.md }}>
-        <Input label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-        <Input label="Password" value={password} onChangeText={setPassword} secureTextEntry />
-        {error ? <AppText style={{ color: theme.colors.danger }}>{error}</AppText> : null}
-        <Button loading={loading} onPress={() => void submit()} disabled={!email || !password}>
+        <Input
+          label="Email"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+        <Input
+          label="Password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+        {error ? (
+          <AppText style={{ color: theme.colors.danger }}>{error}</AppText>
+        ) : null}
+        <Button
+          loading={loading}
+          onPress={() => void submit()}
+          disabled={!email || !password}
+        >
           Sign In
         </Button>
         <Link href="/(auth)/forgot-password" asChild>
@@ -47,7 +68,9 @@ export default function SignInScreen() {
   );
 }
 
-function Input(props: React.ComponentProps<typeof TextInput> & { label: string }) {
+function Input(
+  props: React.ComponentProps<typeof TextInput> & { label: string },
+) {
   const theme = useTheme();
   const { label, ...inputProps } = props;
   return (

@@ -1,4 +1,4 @@
-import { View } from "react-native";
+import { Alert, Linking, View } from "react-native";
 import { useState } from "react";
 import { Modal, Switch, TextInput } from "react-native";
 import { Image } from "expo-image";
@@ -6,7 +6,12 @@ import { Heart, Pin, Play, Trash2, X } from "lucide-react-native";
 import { Button } from "@/components/primitives/Button";
 import { Screen } from "@/components/primitives/Screen";
 import { Section } from "@/components/primitives/Section";
-import { EmptyState, ErrorState, IconButton, LoadingState } from "@/components/primitives/StateViews";
+import {
+  EmptyState,
+  ErrorState,
+  IconButton,
+  LoadingState,
+} from "@/components/primitives/StateViews";
 import { AppText } from "@/components/primitives/Text";
 import { TitleRail } from "./TitleRail";
 import {
@@ -34,23 +39,81 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
   const [reviewText, setReviewText] = useState("");
   const [rating, setRating] = useState("");
   const [spoiler, setSpoiler] = useState(false);
-  const [visibility, setVisibility] = useState<"PRIVATE" | "FOLLOWERS" | "PUBLIC">("PUBLIC");
+  const [visibility, setVisibility] = useState<
+    "PRIVATE" | "FOLLOWERS" | "PUBLIC"
+  >("PUBLIC");
   const data = title.data;
   const nextEpisode = data?.seasons
     ?.flatMap((season) => season.episodes ?? [])
     .find((episode) => !episode.watched);
+  const confirmRemove = () => {
+    if (!data) return;
+    Alert.alert(
+      "Remove from watchlist?",
+      `${data.title} and related progress will be removed.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => remove.mutate({ type, id }),
+        },
+      ],
+    );
+  };
+  const confirmReset = () => {
+    if (!data) return;
+    Alert.alert(
+      "Reset progress?",
+      `Episode progress for ${data.title} will be cleared.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Reset",
+          style: "destructive",
+          onPress: () => progress.mutate({ action: "resetShow", showId: id }),
+        },
+      ],
+    );
+  };
+  const openTrailer = async (url?: string | null) => {
+    if (!url) return;
+    const supported = await Linking.canOpenURL(url);
+    if (supported) await Linking.openURL(url);
+    else
+      Alert.alert(
+        "Trailer unavailable",
+        "This trailer cannot be opened on this device.",
+      );
+  };
 
   return (
-    <Screen title={data?.title || (type === "show" ? "Show" : "Movie")} subtitle={data?.year ? String(data.year) : undefined}>
+    <Screen
+      title={data?.title || (type === "show" ? "Show" : "Movie")}
+      subtitle={data?.year ? String(data.year) : undefined}
+    >
       {title.isLoading ? <LoadingState label="Loading title" /> : null}
-      {title.isError ? <ErrorState message={title.error.message} onRetry={() => void title.refetch()} /> : null}
+      {title.isError ? (
+        <ErrorState
+          message={title.error.message}
+          onRetry={() => void title.refetch()}
+        />
+      ) : null}
       {data ? (
         <>
-          <View style={{ borderRadius: theme.radius.md, overflow: "hidden", backgroundColor: theme.colors.surfaceMuted }}>
+          <View
+            style={{
+              borderRadius: theme.radius.md,
+              overflow: "hidden",
+              backgroundColor: theme.colors.surfaceMuted,
+            }}
+          >
             <View style={{ minHeight: 230 }}>
               {data.backdropUrl || data.posterUrl ? (
                 <Image
-                  source={{ uri: data.backdropUrl || data.posterUrl || undefined }}
+                  source={{
+                    uri: data.backdropUrl || data.posterUrl || undefined,
+                  }}
                   style={{ position: "absolute", inset: 0 }}
                   contentFit="cover"
                 />
@@ -60,7 +123,10 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                   flex: 1,
                   justifyContent: "flex-end",
                   padding: theme.spacing.lg,
-                  backgroundColor: theme.mode === "dark" ? "rgba(0,0,0,0.46)" : "rgba(255,255,255,0.66)",
+                  backgroundColor:
+                    theme.mode === "dark"
+                      ? "rgba(0,0,0,0.46)"
+                      : "rgba(255,255,255,0.66)",
                   gap: theme.spacing.md,
                 }}
               >
@@ -68,13 +134,22 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                 <AppText muted numberOfLines={4}>
                   {data.overview || "No overview yet."}
                 </AppText>
-                <View style={{ flexDirection: "row", gap: theme.spacing.sm, alignItems: "center" }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    gap: theme.spacing.sm,
+                    alignItems: "center",
+                  }}
+                >
                   <Button
                     loading={progress.isPending || watchlistUpdate.isPending}
                     disabled={type === "show" && !nextEpisode?.id}
                     onPress={() => {
                       if (type === "show" && nextEpisode?.id) {
-                        progress.mutate({ action: "watch", episodeId: nextEpisode.id });
+                        progress.mutate({
+                          action: "watch",
+                          episodeId: nextEpisode.id,
+                        });
                       } else if (type === "movie") {
                         watchlistUpdate.mutate({
                           ...titleToWatchlistInput(data),
@@ -86,7 +161,9 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                     {type === "show" ? "Mark Next" : "Mark Watched"}
                   </Button>
                   <IconButton
-                    label={data.isFavourite ? "Remove favourite" : "Add favourite"}
+                    label={
+                      data.isFavourite ? "Remove favourite" : "Add favourite"
+                    }
                     onPress={() =>
                       watchlistUpdate.mutate({
                         ...titleToWatchlistInput(data),
@@ -96,11 +173,20 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                   >
                     <Heart
                       size={18}
-                      color={data.isFavourite ? theme.colors.accent : theme.colors.text}
-                      fill={data.isFavourite ? theme.colors.accent : "transparent"}
+                      color={
+                        data.isFavourite
+                          ? theme.colors.accent
+                          : theme.colors.text
+                      }
+                      fill={
+                        data.isFavourite ? theme.colors.accent : "transparent"
+                      }
                     />
                   </IconButton>
-                  <IconButton label="Remove from watchlist" onPress={() => remove.mutate({ type, id })}>
+                  <IconButton
+                    label="Remove from watchlist"
+                    onPress={confirmRemove}
+                  >
                     <Trash2 size={18} color={theme.colors.danger} />
                   </IconButton>
                   <IconButton
@@ -123,9 +209,15 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
               </View>
             </View>
           </View>
-          {(progress.isError || watchlistUpdate.isError || remove.isError || setPin.isError) && (
+          {(progress.isError ||
+            watchlistUpdate.isError ||
+            remove.isError ||
+            setPin.isError) && (
             <AppText style={{ color: theme.colors.danger }}>
-              {progress.error?.message || watchlistUpdate.error?.message || remove.error?.message || setPin.error?.message}
+              {progress.error?.message ||
+                watchlistUpdate.error?.message ||
+                remove.error?.message ||
+                setPin.error?.message}
             </AppText>
           )}
           <Section title="Availability">
@@ -141,20 +233,39 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                 <View style={{ gap: theme.spacing.md }}>
                   {data.seasons.slice(0, 3).map((season) => (
                     <View key={season.id} style={{ gap: theme.spacing.xs }}>
-                      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: theme.spacing.sm }}>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                          gap: theme.spacing.sm,
+                        }}
+                      >
                         <AppText variant="label">{season.name}</AppText>
                         <Button
                           variant="ghost"
                           loading={progress.isPending}
-                          onPress={() => progress.mutate({ action: "markSeason", seasonId: season.id })}
+                          onPress={() =>
+                            progress.mutate({
+                              action: "markSeason",
+                              seasonId: season.id,
+                            })
+                          }
                         >
                           Mark Season
                         </Button>
                       </View>
                       {season.episodes?.slice(0, 4).map((episode) => (
-                        <View key={episode.id} style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm }}>
+                        <View
+                          key={episode.id}
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: theme.spacing.sm,
+                          }}
+                        >
                           <AppText muted style={{ flex: 1 }}>
-                            {episode.episodeLabel || episode.title} {episode.watched ? "· watched" : ""}
+                            {episode.episodeLabel || episode.title}{" "}
+                            {episode.watched ? "· watched" : ""}
                           </AppText>
                           <Button
                             variant={episode.watched ? "ghost" : "secondary"}
@@ -173,10 +284,20 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                     </View>
                   ))}
                   <View style={{ flexDirection: "row", gap: theme.spacing.sm }}>
-                    <Button variant="secondary" loading={progress.isPending} onPress={() => progress.mutate({ action: "markCaughtUp", showId: id })}>
+                    <Button
+                      variant="secondary"
+                      loading={progress.isPending}
+                      onPress={() =>
+                        progress.mutate({ action: "markCaughtUp", showId: id })
+                      }
+                    >
                       Caught Up
                     </Button>
-                    <Button variant="danger" loading={progress.isPending} onPress={() => progress.mutate({ action: "resetShow", showId: id })}>
+                    <Button
+                      variant="danger"
+                      loading={progress.isPending}
+                      onPress={confirmReset}
+                    >
                       Reset
                     </Button>
                   </View>
@@ -187,11 +308,19 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
             </Section>
           ) : null}
           <Section title="Trailers">
-            {extras.isLoading ? <LoadingState label="Loading trailers" /> : null}
+            {extras.isLoading ? (
+              <LoadingState label="Loading trailers" />
+            ) : null}
             {extras.data?.trailers?.length ? (
               <View style={{ gap: theme.spacing.sm }}>
                 {extras.data.trailers.slice(0, 3).map((trailer) => (
-                  <Button key={trailer.id} variant="secondary" icon={<Play size={15} color={theme.colors.accent} />}>
+                  <Button
+                    key={trailer.id}
+                    variant="secondary"
+                    icon={<Play size={15} color={theme.colors.accent} />}
+                    disabled={!trailer.url}
+                    onPress={() => void openTrailer(trailer.url)}
+                  >
                     {trailer.title}
                   </Button>
                 ))}
@@ -204,19 +333,31 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
             {data.reviews?.length ? (
               <View style={{ gap: theme.spacing.md }}>
                 {data.reviews.slice(0, 3).map((review) => (
-                  <AppText key={review.id}>{review.spoiler ? "Spoiler review" : review.body || review.title}</AppText>
+                  <AppText key={review.id}>
+                    {review.spoiler
+                      ? "Spoiler review"
+                      : review.body || review.title}
+                  </AppText>
                 ))}
               </View>
             ) : (
               <EmptyState title="No reviews yet" />
             )}
           </Section>
-          <Modal visible={reviewOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setReviewOpen(false)}>
+          <Modal
+            visible={reviewOpen}
+            animationType="slide"
+            presentationStyle="pageSheet"
+            onRequestClose={() => setReviewOpen(false)}
+          >
             <Screen
               title="Review"
               subtitle={data.title}
               right={
-                <IconButton label="Close review" onPress={() => setReviewOpen(false)}>
+                <IconButton
+                  label="Close review"
+                  onPress={() => setReviewOpen(false)}
+                >
                   <X size={18} color={theme.colors.text} />
                 </IconButton>
               }
@@ -258,18 +399,36 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                   textAlignVertical: "top",
                 }}
               />
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
                 <AppText>Spoiler</AppText>
                 <Switch value={spoiler} onValueChange={setSpoiler} />
               </View>
               <View style={{ flexDirection: "row", gap: theme.spacing.sm }}>
                 {(["PRIVATE", "FOLLOWERS", "PUBLIC"] as const).map((option) => (
-                  <Button key={option} variant={visibility === option ? "primary" : "ghost"} onPress={() => setVisibility(option)}>
-                    {option === "PRIVATE" ? "Private" : option === "FOLLOWERS" ? "Followers" : "Public"}
+                  <Button
+                    key={option}
+                    variant={visibility === option ? "primary" : "ghost"}
+                    onPress={() => setVisibility(option)}
+                  >
+                    {option === "PRIVATE"
+                      ? "Private"
+                      : option === "FOLLOWERS"
+                        ? "Followers"
+                        : "Public"}
                   </Button>
                 ))}
               </View>
-              {review.isError ? <AppText style={{ color: theme.colors.danger }}>{review.error.message}</AppText> : null}
+              {review.isError ? (
+                <AppText style={{ color: theme.colors.danger }}>
+                  {review.error.message}
+                </AppText>
+              ) : null}
               <Button
                 loading={review.isPending}
                 onPress={() =>
@@ -299,7 +458,10 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
             </Screen>
           </Modal>
           <Section title="Related">
-            <TitleRail items={extras.data?.related} empty="No related titles." />
+            <TitleRail
+              items={extras.data?.related}
+              empty="No related titles."
+            />
           </Section>
         </>
       ) : null}
