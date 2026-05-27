@@ -52,8 +52,8 @@ interface built with Expo and React Native.
 Create the repo from Expo's SDK 56 template:
 
 ```sh
-npx create-expo-app@latest Watchlog-mobile --template default@sdk-56
-cd Watchlog-mobile
+npx create-expo-app@latest watchlog-mobile --template default@sdk-56
+cd watchlog-mobile
 ```
 
 Install required runtime dependencies:
@@ -82,22 +82,26 @@ npx eas-cli@latest init
 Create `.env.local`:
 
 ```sh
+EXPO_PUBLIC_APP_NAME=Watchlog
 EXPO_PUBLIC_API_ORIGIN=http://localhost:5173
-EXPO_PUBLIC_APP_SCHEME=Watchlog
+EXPO_PUBLIC_APP_SCHEME=watchlog
 ```
 
 Production builds must set `EXPO_PUBLIC_API_ORIGIN` to the deployed Watchlog
-Cloudflare Worker origin and keep `EXPO_PUBLIC_APP_SCHEME=Watchlog`.
+Cloudflare Worker origin, keep `EXPO_PUBLIC_APP_SCHEME=watchlog`, and keep
+`EXPO_PUBLIC_APP_NAME=Watchlog`.
 
 ## Backend Setup Required
 
 The Watchlog backend must have:
 
-- `MOBILE_APP_SCHEME=Watchlog`.
+- `MOBILE_APP_SCHEME=watchlog`.
 - Better Auth Expo server plugin enabled.
 - `/api/v1` app API enabled.
 - `BETTER_AUTH_URL` and `PUBLIC_APP_URL` set to the deployed origin.
 - Cloudflare secrets configured for database, auth, TMDB, email, and cron.
+- `/api/v1/shows/:id/extras` and `/api/v1/movies/:id/extras` enabled for
+  trailers, cast, crew, related titles, and external links.
 
 ## Auth Client
 
@@ -112,9 +116,9 @@ export const authClient = createAuthClient({
   baseURL: process.env.EXPO_PUBLIC_API_ORIGIN,
   plugins: [
     expoClient({
-      scheme: process.env.EXPO_PUBLIC_APP_SCHEME ?? "Watchlog",
-      storagePrefix: "Watchlog",
-      cookiePrefix: "Watchlog",
+      scheme: process.env.EXPO_PUBLIC_APP_SCHEME ?? "watchlog",
+      storagePrefix: "watchlog",
+      cookiePrefix: "watchlog",
       storage: SecureStore,
     }),
   ],
@@ -127,7 +131,7 @@ All app API calls should include:
 {
 	Accept: 'application/json',
 	Cookie: authClient.getCookie(),
-	'X-Watchlog-Client': 'Watchlog-mobile'
+	'X-Watchlog-Client': 'watchlog-mobile'
 }
 ```
 
@@ -262,6 +266,8 @@ Manual smoke coverage:
 - Mark a show episode watched and undo it.
 - Open show and movie detail pages with trailers, cast, reviews, lists.
 - Create/edit/delete a review and list.
+- Add items to a custom list from search; existing items must not be re-ranked and
+  visible ranks must render as `1`, `2`, `3`, not duplicated stored values.
 - Comment, reply, upvote, downvote, and mark notifications read.
 - Change country, providers, theme, and visibility settings.
 - Open profile, confirm the one-grid activity calendar press details, then open a

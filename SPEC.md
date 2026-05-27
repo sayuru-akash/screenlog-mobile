@@ -49,12 +49,13 @@ Core libraries:
 Backend origin is configured with:
 
 ```sh
+EXPO_PUBLIC_APP_NAME=Watchlog
 EXPO_PUBLIC_API_ORIGIN=http://localhost:5173
-EXPO_PUBLIC_APP_SCHEME=Watchlog
+EXPO_PUBLIC_APP_SCHEME=watchlog
 ```
 
 Production must set `EXPO_PUBLIC_API_ORIGIN` to the deployed Cloudflare Worker
-origin. The backend must set `MOBILE_APP_SCHEME=Watchlog` so Better Auth trusts
+origin. The backend must set `MOBILE_APP_SCHEME=watchlog` so Better Auth trusts
 the app deep link scheme.
 
 Auth remains canonical at:
@@ -87,9 +88,9 @@ export const authClient = createAuthClient({
   baseURL: process.env.EXPO_PUBLIC_API_ORIGIN,
   plugins: [
     expoClient({
-      scheme: process.env.EXPO_PUBLIC_APP_SCHEME ?? "Watchlog",
-      storagePrefix: "Watchlog",
-      cookiePrefix: "Watchlog",
+      scheme: process.env.EXPO_PUBLIC_APP_SCHEME ?? "watchlog",
+      storagePrefix: "watchlog",
+      cookiePrefix: "watchlog",
       storage: SecureStore,
     }),
   ],
@@ -102,7 +103,7 @@ Authenticated app API requests must attach the Better Auth cookie:
 const headers = {
   Accept: "application/json",
   Cookie: authClient.getCookie(),
-  "X-Watchlog-Client": "Watchlog-mobile",
+  "X-Watchlog-Client": "watchlog-mobile",
 };
 ```
 
@@ -111,7 +112,7 @@ For JSON mutations, also send:
 ```ts
 {
 	'Content-Type': 'application/json',
-	'X-Watchlog-Client': 'Watchlog-mobile'
+	'X-Watchlog-Client': 'watchlog-mobile'
 }
 ```
 
@@ -174,7 +175,9 @@ App API endpoints:
 | `POST`   | `/api/v1/lookup`                                         | Ensure/cross-map TMDB title to local ID          |
 | `GET`    | `/api/v1/discover`                                       | Discovery rows                                   |
 | `GET`    | `/api/v1/shows/:id`                                      | Show detail, seasons, progress, reviews, extras  |
+| `GET`    | `/api/v1/shows/:id/extras`                               | Show trailers, cast, crew, related, external IDs |
 | `GET`    | `/api/v1/movies/:id`                                     | Movie detail, reviews, extras, lists             |
+| `GET`    | `/api/v1/movies/:id/extras`                              | Movie trailers, cast, crew, related, external IDs |
 | `GET`    | `/api/v1/progress?showId=:id`                            | Episode progress for a show                      |
 | `GET`    | `/api/v1/progress`                                       | Recent watched episode progress across shows     |
 | `POST`   | `/api/v1/progress`                                       | Watch/unwatch episode, season, caught-up actions |
@@ -284,11 +287,21 @@ Add list item:
 ```json
 {
   "type": "show",
-  "showId": "local_show_id",
+  "tmdbId": 37854,
+  "title": "One Piece",
+  "overview": "Optional fallback from search result.",
+  "posterPath": "/cMD9Ygz11zjJzAovURpO75Qg7rT.jpg",
+  "firstAirDate": "1999-10-20",
+  "genres": ["Action & Adventure", "Animation"],
   "note": "Best watched slowly.",
   "rank": 1
 }
 ```
+
+When adding from search, prefer `tmdbId` plus fallback metadata so the backend can
+create a lightweight local shell without hydrating every episode. If the item
+already exists, the backend must keep its existing rank unless the request
+explicitly includes a new `rank`.
 
 Provider settings:
 
@@ -374,6 +387,8 @@ Required app screens:
 - Auth persists across app restarts using Better Auth Expo and SecureStore.
 - Session expiry returns the user to sign in without losing unsent local form text.
 - All mutating API requests use `/api/v1`, JSON, session cookie, and mobile header.
+- The mobile header value is exact and lowercase: `x-watchlog-client:
+  watchlog-mobile`.
 - Search and detail pages degrade gracefully when TMDB, providers, trailers, images,
   or cast data are missing.
 - Streaming provider logos use cached remote images and accessible text labels.
@@ -381,6 +396,9 @@ Required app screens:
 - Notifications can be disabled and never create noisy repeated prompts.
 - iOS and Android both pass smoke tests for auth, search, watchlist, progress,
   list add/remove, review/comment, profile visibility, and settings persistence.
+- List item ranks are display positions. The app should not show stale stored rank
+  prefixes such as duplicate `2.` values; render the current ordered index unless
+  edit/reorder mode is active.
 
 ## Non-Goals
 

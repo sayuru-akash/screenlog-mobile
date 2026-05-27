@@ -200,8 +200,12 @@ List index:
 List detail:
 
 - Header with title, description, tags, visibility.
-- Ranked items as draggable list only when edit mode is enabled.
+- Ranked items show compact position chips. Use the current visible order for
+  normal display so duplicate stored rank values never appear as repeated prefixes.
+- Draggable reordering appears only in edit mode and persists explicit ranks.
 - Add item opens search sheet scoped to shows/movies.
+- Adding a title should feel instant; show an optimistic disabled row state, then
+  trust the server response. Do not show raw database or transaction errors.
 
 ## Profile
 

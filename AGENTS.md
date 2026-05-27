@@ -133,7 +133,7 @@ Data flow:
 1. Auth screens call Better Auth through `authClient`.
 2. The Better Auth Expo client stores session cookies in SecureStore.
 3. App API calls read `authClient.getCookie()` and attach it as `Cookie`.
-4. App API calls use `/api/v1/*` and `x-Watchlog-client: Watchlog-mobile`.
+4. App API calls use `/api/v1/*` and `x-watchlog-client: watchlog-mobile`.
 5. TanStack Query owns loading, caching, invalidation, and background refresh.
 6. Screens render cached data first, then reconcile with fresh server responses.
 
@@ -166,7 +166,7 @@ Required smoke flows:
 - Never put `TMDB_API_KEY`, database strings, or backend secrets in the app.
 - Only public config may use `EXPO_PUBLIC_*`.
 - Never call non-versioned app data endpoints from mobile except `/api/auth/*`.
-- Always attach `x-Watchlog-client: Watchlog-mobile` to `/api/v1` calls.
+- Always attach `x-watchlog-client: watchlog-mobile` to `/api/v1` calls.
 - Treat all API responses as untrusted and validate important shapes.
 - Do not show raw server errors to users.
 - Respect spoiler flags in reviews and comments.
@@ -184,11 +184,14 @@ Required smoke flows:
 - Do not mark work complete without running the relevant quality gate.
 - Preserve native platform feel over copying web layouts exactly.
 - Keep design minimal; avoid excessive buttons in banners and detail headers.
+- Keep mobile docs in sync with the Watchlog web repo when `/api/v1`, auth,
+  profile, review, list, notification, or provider behavior changes.
 
 ## Extensibility Hooks
 
+- `EXPO_PUBLIC_APP_NAME` - Public display name; use `Watchlog`.
 - `EXPO_PUBLIC_API_ORIGIN` - Watchlog backend origin.
-- `EXPO_PUBLIC_APP_SCHEME` - Deep-link scheme, default `Watchlog`.
+- `EXPO_PUBLIC_APP_SCHEME` - Deep-link scheme, default `watchlog`.
 - `src/lib/api-client.ts` - Shared fetch wrapper.
 - `src/lib/auth-client.ts` - Better Auth Expo client.
 - `src/lib/query-client.ts` - Query cache, retries, persistence policy.
