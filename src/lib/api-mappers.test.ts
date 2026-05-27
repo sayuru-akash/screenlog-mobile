@@ -436,6 +436,17 @@ describe("list and log wrappers", () => {
                 posterPath: "/heat.jpg",
               },
             },
+            {
+              id: "item-2",
+              media_type: "MOVIE",
+              movie_id: "movie-2",
+              movie: {
+                title: "Thief",
+                tmdb_id: 11524,
+                poster_path: "/thief.jpg",
+                release_date: "1981-03-27",
+              },
+            },
           ],
         },
       }),
@@ -452,6 +463,13 @@ describe("list and log wrappers", () => {
           movieId: "movie-1",
           tmdbId: 949,
           posterUrl: "https://image.tmdb.org/t/p/w500/heat.jpg",
+        },
+        {
+          id: "item-2",
+          movieId: "movie-2",
+          tmdbId: 11524,
+          posterUrl: "https://image.tmdb.org/t/p/w500/thief.jpg",
+          year: "1981",
         },
       ],
     });

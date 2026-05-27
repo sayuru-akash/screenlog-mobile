@@ -779,25 +779,42 @@ function normalizeListDetail(item: unknown): CustomListDetail {
 
 function normalizeListItem(item: unknown) {
   const raw = asRecord(item);
+  const showSource = asRecord(raw.show);
+  const movieSource = asRecord(raw.movie);
+  const showId = raw.showId ?? raw.show_id ?? showSource.id;
+  const movieId = raw.movieId ?? raw.movie_id ?? movieSource.id;
   const type =
-    mediaType(raw.type ?? raw.mediaType) ?? (raw.showId ? "show" : "movie");
-  const source = asRecord(type === "show" ? raw.show : raw.movie);
-  const id =
-    type === "show" ? (raw.showId ?? source.id) : (raw.movieId ?? source.id);
+    mediaType(raw.type ?? raw.mediaType ?? raw.media_type) ??
+    (showId ? "show" : "movie");
+  const source = type === "show" ? showSource : movieSource;
+  const id = type === "show" ? showId : movieId;
   if (!id) return null;
   return {
     id: stringValue(raw.id ?? id),
     title: stringValue(raw.title ?? source.title, "Untitled"),
     type,
-    tmdbId: numberOrUndefined(source.tmdbId),
+    tmdbId: numberOrUndefined(
+      raw.tmdbId ?? raw.tmdb_id ?? source.tmdbId ?? source.tmdb_id,
+    ),
     showId: type === "show" ? stringValue(id) : undefined,
     movieId: type === "movie" ? stringValue(id) : undefined,
     rank: numberOrNull(raw.rank),
     posterUrl: tmdbImageUrl(
-      raw.posterUrl ?? raw.posterPath ?? source.posterPath,
+      raw.posterUrl ??
+        raw.poster_url ??
+        raw.posterPath ??
+        raw.poster_path ??
+        source.posterPath ??
+        source.poster_path,
     ),
     note: nullableString(raw.note),
-    year: yearFrom(source.firstAirDate ?? source.releaseDate ?? source.year),
+    year: yearFrom(
+      source.firstAirDate ??
+        source.first_air_date ??
+        source.releaseDate ??
+        source.release_date ??
+        source.year,
+    ),
   };
 }
 
@@ -839,18 +856,18 @@ function normalizeProfilePin(item: unknown): ProfilePin | null {
     };
   }
 
-	  if (typeText === "LIST" || raw.listId || list.id) {
-	    const id = raw.listId ?? list.id;
-	    if (!id) return null;
-	    return {
-	      id: stringValue(id),
-	      type: "list",
-	      title: stringValue(raw.title ?? list.title, "List"),
-	      subtitle: nullableString(list.description) ?? "Custom list",
-	      posterUrl: profileListPinPosterUrl(list),
-	      href: `/list/${stringValue(id)}`,
-	    };
-	  }
+  if (typeText === "LIST" || raw.listId || list.id) {
+    const id = raw.listId ?? list.id;
+    if (!id) return null;
+    return {
+      id: stringValue(id),
+      type: "list",
+      title: stringValue(raw.title ?? list.title, "List"),
+      subtitle: nullableString(list.description) ?? "Custom list",
+      posterUrl: profileListPinPosterUrl(list),
+      href: `/list/${stringValue(id)}`,
+    };
+  }
 
   if (typeText === "LOG" || raw.logId || log.id) {
     const id = raw.logId ?? log.id;
@@ -868,8 +885,8 @@ function normalizeProfilePin(item: unknown): ProfilePin | null {
     };
   }
 
-	  return null;
-	}
+  return null;
+}
 
 function profileListPinPosterUrl(list: AnyRecord) {
   const directCover = tmdbImageUrl(

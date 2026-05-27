@@ -90,7 +90,6 @@ export function ProfilePins({ pins }: { pins?: ProfilePin[] }) {
 }
 
 function ProfilePinImage({ pin }: { pin: ProfilePin }) {
-  const theme = useTheme();
   if (pin.posterUrl) {
     return (
       <Image

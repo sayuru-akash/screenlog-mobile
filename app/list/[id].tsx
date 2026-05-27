@@ -13,7 +13,10 @@ import {
 } from "@/components/primitives/StateViews";
 import { TitleRow } from "@/components/content/TitleRow";
 import { AppText } from "@/components/primitives/Text";
-import { toDisplayListItems } from "@/features/lists/list-display";
+import {
+  routeForListItem,
+  toDisplayListItems,
+} from "@/features/lists/list-display";
 import {
   useAddListItemMutation,
   useDeleteListMutation,
@@ -186,124 +189,125 @@ export default function ListDetailScreen() {
           gap: theme.spacing.md,
         }}
       >
-        {items.map((item, index) => (
-          <View
-            key={`${item.id}-${item.type}-${item.rank ?? index}`}
-            style={{ width: "47%", flexGrow: 1, maxWidth: 190 }}
-          >
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Open ${item.title}`}
-              onPress={() =>
-                router.push(
-                  item.type === "movie" && item.movieId
-                    ? `/movie/${item.movieId}`
-                    : `/show/${item.showId}`,
-                )
-              }
-              style={({ pressed }) => ({
-                gap: theme.spacing.sm,
-                opacity: pressed ? 0.72 : 1,
-              })}
+        {items.map((item, index) => {
+          const route = routeForListItem(item);
+          return (
+            <View
+              key={`${item.id}-${item.type}-${item.movieId ?? item.showId ?? "missing"}-${item.rank ?? index}`}
+              style={{ width: "47%", flexGrow: 1, maxWidth: 190 }}
             >
-              <View
-                style={{
-                  aspectRatio: 2 / 3,
-                  borderRadius: theme.radius.md,
-                  backgroundColor: theme.colors.surfaceMuted,
-                  overflow: "hidden",
-                }}
-              >
-                {item.posterUrl ? (
-                  <Image
-                    source={{ uri: item.posterUrl }}
-                    style={{ width: "100%", height: "100%" }}
-                    contentFit="cover"
-                  />
-                ) : (
-                  <View
-                    style={{
-                      flex: 1,
-                      justifyContent: "flex-end",
-                      padding: theme.spacing.md,
-                    }}
-                  >
-                    <AppText variant="label">{item.title}</AppText>
-                  </View>
-                )}
-              </View>
-              <View
-                style={{
-                  flexDirection: "row",
-                  gap: theme.spacing.sm,
-                  alignItems: "flex-start",
-                }}
-              >
-                {list.data?.ranked ? (
-                  <View
-                    style={{
-                      borderRadius: theme.radius.sm,
-                      backgroundColor: theme.colors.surfaceMuted,
-                      paddingHorizontal: theme.spacing.sm,
-                      paddingVertical: 2,
-                    }}
-                  >
-                    <AppText variant="caption" muted>
-                      {item.displayPosition}
-                    </AppText>
-                  </View>
-                ) : null}
-                <View style={{ flex: 1 }}>
-                  <AppText variant="label" numberOfLines={2}>
-                    {item.title}
-                  </AppText>
-                  {item.note ? (
-                    <AppText variant="caption" muted numberOfLines={2}>
-                      {item.note}
-                    </AppText>
-                  ) : null}
-                  {item.year ? (
-                    <AppText variant="caption" muted numberOfLines={1}>
-                      {item.year}
-                    </AppText>
-                  ) : null}
-                </View>
-              </View>
-            </Pressable>
-            {canEdit ? (
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`Remove ${item.title}`}
-                onPress={() =>
-                  Alert.alert(
-                    "Remove title?",
-                    `${item.title} will be removed from this list.`,
-                    [
-                      { text: "Cancel", style: "cancel" },
-                      {
-                        text: "Remove",
-                        style: "destructive",
-                        onPress: () => removeItem.mutate(item),
-                      },
-                    ],
-                  )
-                }
+                accessibilityLabel={`Open ${item.title}`}
+                accessibilityState={{ disabled: !route }}
+                disabled={!route}
+                onPress={() => {
+                  if (route) router.push(route);
+                }}
                 style={({ pressed }) => ({
-                  marginTop: theme.spacing.sm,
-                  minHeight: 36,
-                  borderRadius: theme.radius.sm,
-                  borderWidth: 1,
-                  borderColor: theme.colors.border,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: pressed ? 0.72 : 1,
+                  gap: theme.spacing.sm,
+                  opacity: pressed ? 0.72 : route ? 1 : 0.58,
                 })}
               >
-                <Trash2 size={16} color={theme.colors.danger} />
+                <View
+                  style={{
+                    aspectRatio: 2 / 3,
+                    borderRadius: theme.radius.md,
+                    backgroundColor: theme.colors.surfaceMuted,
+                    overflow: "hidden",
+                  }}
+                >
+                  {item.posterUrl ? (
+                    <Image
+                      source={{ uri: item.posterUrl }}
+                      style={{ width: "100%", height: "100%" }}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <View
+                      style={{
+                        flex: 1,
+                        justifyContent: "flex-end",
+                        padding: theme.spacing.md,
+                      }}
+                    >
+                      <AppText variant="label">{item.title}</AppText>
+                    </View>
+                  )}
+                </View>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    gap: theme.spacing.sm,
+                    alignItems: "flex-start",
+                  }}
+                >
+                  {list.data?.ranked ? (
+                    <View
+                      style={{
+                        borderRadius: theme.radius.sm,
+                        backgroundColor: theme.colors.surfaceMuted,
+                        paddingHorizontal: theme.spacing.sm,
+                        paddingVertical: 2,
+                      }}
+                    >
+                      <AppText variant="caption" muted>
+                        {item.displayPosition}
+                      </AppText>
+                    </View>
+                  ) : null}
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="label" numberOfLines={2}>
+                      {item.title}
+                    </AppText>
+                    {item.note ? (
+                      <AppText variant="caption" muted numberOfLines={2}>
+                        {item.note}
+                      </AppText>
+                    ) : null}
+                    {item.year ? (
+                      <AppText variant="caption" muted numberOfLines={1}>
+                        {item.year}
+                      </AppText>
+                    ) : null}
+                  </View>
+                </View>
               </Pressable>
-            ) : null}
-          </View>
-        ))}
+              {canEdit ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove ${item.title}`}
+                  onPress={() =>
+                    Alert.alert(
+                      "Remove title?",
+                      `${item.title} will be removed from this list.`,
+                      [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                          text: "Remove",
+                          style: "destructive",
+                          onPress: () => removeItem.mutate(item),
+                        },
+                      ],
+                    )
+                  }
+                  style={({ pressed }) => ({
+                    marginTop: theme.spacing.sm,
+                    minHeight: 36,
+                    borderRadius: theme.radius.sm,
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: pressed ? 0.72 : 1,
+                  })}
+                >
+                  <Trash2 size={16} color={theme.colors.danger} />
+                </Pressable>
+              ) : null}
+            </View>
+          );
+        })}
       </View>
       {removeItem.isError || updateList.isError || deleteList.isError ? (
         <ErrorState
