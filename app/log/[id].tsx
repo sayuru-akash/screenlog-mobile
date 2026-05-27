@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
+import { Image } from "expo-image";
 import { useState } from "react";
 import { Alert, Modal, Switch, TextInput, View } from "react-native";
 import { X } from "lucide-react-native";
@@ -39,6 +40,9 @@ export default function LogDetailScreen() {
   const [editSpoiler, setEditSpoiler] = useState(false);
   const [commentBody, setCommentBody] = useState("");
   const [commentSpoiler, setCommentSpoiler] = useState(false);
+  const [revealedComments, setRevealedComments] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [replyParent, setReplyParent] = useState<{
     id: string;
     label: string;
@@ -59,9 +63,50 @@ export default function LogDetailScreen() {
       ) : null}
       {log.data ? (
         <>
-          <AppText>
-            {hiddenSpoiler ? "Spoiler review." : log.data.body || "No text."}
-          </AppText>
+          <View
+            style={{
+              flexDirection: "row",
+              gap: theme.spacing.md,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              borderRadius: theme.radius.md,
+              backgroundColor: theme.colors.surface,
+              padding: theme.spacing.md,
+            }}
+          >
+            {log.data.posterUrl ? (
+              <Image
+                source={{ uri: log.data.posterUrl }}
+                style={{
+                  width: 68,
+                  height: 102,
+                  borderRadius: theme.radius.sm,
+                  backgroundColor: theme.colors.surfaceMuted,
+                }}
+                contentFit="cover"
+              />
+            ) : null}
+            <View style={{ flex: 1, gap: theme.spacing.xs }}>
+              <AppText variant="heading" numberOfLines={2}>
+                {log.data.subtitle || log.data.title || "Review"}
+              </AppText>
+              <AppText variant="caption" muted>
+                {log.data.user?.username
+                  ? `@${log.data.user.username}`
+                  : "Watchlog"}
+                {log.data.watchedAt
+                  ? ` · ${formatDate(log.data.watchedAt)}`
+                  : ""}
+                {log.data.rewatch ? " · rewatch" : ""}
+                {log.data.rating ? ` · ${log.data.rating}/10` : ""}
+              </AppText>
+              <AppText>
+                {hiddenSpoiler
+                  ? "Spoiler review."
+                  : log.data.body || "No text."}
+              </AppText>
+            </View>
+          </View>
           {log.data.spoiler ? (
             <Button
               variant="secondary"
@@ -110,10 +155,28 @@ export default function LogDetailScreen() {
       {comments.isLoading ? <LoadingState label="Loading comments" /> : null}
       {comments.data?.comments?.length ? (
         comments.data.comments.map((comment) => (
-          <View key={comment.id} style={{ gap: theme.spacing.xs }}>
-            <AppText>
-              {comment.spoiler ? "Spoiler comment" : comment.body}
-            </AppText>
+          <View
+            key={comment.id}
+            style={{
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              borderRadius: theme.radius.sm,
+              backgroundColor: theme.colors.surface,
+              padding: theme.spacing.md,
+              gap: theme.spacing.xs,
+            }}
+          >
+            <CommentBody
+              comment={comment}
+              revealed={revealedComments.has(comment.id)}
+              onReveal={() =>
+                setRevealedComments((current) => {
+                  const next = new Set(current);
+                  next.add(comment.id);
+                  return next;
+                })
+              }
+            />
             <View
               style={{
                 flexDirection: "row",
@@ -163,9 +226,18 @@ export default function LogDetailScreen() {
               >
                 {comment.replies.map((reply) => (
                   <View key={reply.id} style={{ gap: theme.spacing.xs }}>
-                    <AppText muted>
-                      {reply.spoiler ? "Spoiler reply" : reply.body}
-                    </AppText>
+                    <CommentBody
+                      comment={reply}
+                      revealed={revealedComments.has(reply.id)}
+                      onReveal={() =>
+                        setRevealedComments((current) => {
+                          const next = new Set(current);
+                          next.add(reply.id);
+                          return next;
+                        })
+                      }
+                      muted
+                    />
                     <View
                       style={{ flexDirection: "row", gap: theme.spacing.sm }}
                     >
@@ -389,4 +461,42 @@ export default function LogDetailScreen() {
       </Modal>
     </Screen>
   );
+}
+
+function CommentBody({
+  comment,
+  revealed,
+  onReveal,
+  muted = false,
+}: {
+  comment: { spoiler?: boolean; body?: string | null; title?: string | null };
+  revealed: boolean;
+  onReveal: () => void;
+  muted?: boolean;
+}) {
+  if (comment.spoiler && !revealed) {
+    return (
+      <View style={{ gap: 6 }}>
+        <AppText muted={muted}>Spoiler comment.</AppText>
+        <Button variant="ghost" onPress={onReveal}>
+          Reveal
+        </Button>
+      </View>
+    );
+  }
+  return (
+    <AppText muted={muted}>
+      {comment.body || comment.title || "No text."}
+    </AppText>
+  );
+}
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }

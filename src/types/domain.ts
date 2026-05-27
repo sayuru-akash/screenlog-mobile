@@ -37,6 +37,8 @@ export type TitleSummary = {
   isFavourite?: boolean;
   isWatched?: boolean;
   provider?: ProviderSummary | null;
+  providers?: ProviderSummary[];
+  providerRegion?: string | null;
 };
 
 export type ProfilePin = {
@@ -146,9 +148,17 @@ export type ReviewSummary = {
   createdAt?: string | null;
   watchedAt?: string | null;
   posterUrl?: string | null;
+  rewatch?: boolean;
+  commentCount?: number;
   reactionScore?: number;
   userReaction?: number;
   canEdit?: boolean;
+  user?: {
+    id?: string;
+    name?: string | null;
+    username?: string | null;
+    avatarUrl?: string | null;
+  };
   replies?: ReviewSummary[];
 };
 
@@ -182,6 +192,7 @@ export type CustomListDetail = CustomListSummary & {
     rank?: number | null;
     posterUrl?: string | null;
     note?: string | null;
+    year?: string | number | null;
   }>;
 };
 

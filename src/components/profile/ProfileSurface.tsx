@@ -40,7 +40,16 @@ export function ProfileHero({
   const theme = useTheme();
   const user = profile.user;
   return (
-    <View style={{ gap: theme.spacing.lg }}>
+    <View
+      style={{
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        borderRadius: theme.radius.md,
+        backgroundColor: theme.colors.surface,
+        padding: theme.spacing.lg,
+        gap: theme.spacing.lg,
+      }}
+    >
       <View
         style={{
           flexDirection: "row",
@@ -77,9 +86,6 @@ export function ProfileHero({
           </AppText>
           <AppText muted numberOfLines={1}>
             {user?.username ? `@${user.username}` : "Watchlog profile"}
-            {profile.stats?.Followers
-              ? ` · ${profile.stats.Followers} followers`
-              : ""}
           </AppText>
           {user?.bio ? (
             <AppText muted numberOfLines={3}>
@@ -88,7 +94,52 @@ export function ProfileHero({
           ) : null}
         </View>
       </View>
+      <View
+        style={{
+          flexDirection: "row",
+          flexWrap: "wrap",
+          gap: theme.spacing.sm,
+        }}
+      >
+        <ProfileMetric
+          label="Followers"
+          value={user?.followerCount ?? profile.stats?.Followers ?? 0}
+        />
+        <ProfileMetric
+          label="Following"
+          value={user?.followingCount ?? profile.stats?.Following ?? 0}
+        />
+        {profile.isSelf ? (
+          <ProfileMetric label="Visibility" value="Your profile" />
+        ) : null}
+      </View>
       {action ? <View>{action}</View> : null}
+    </View>
+  );
+}
+
+function ProfileMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number | null;
+}) {
+  const theme = useTheme();
+  return (
+    <View
+      style={{
+        borderRadius: theme.radius.sm,
+        backgroundColor: theme.colors.surfaceMuted,
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.sm,
+        gap: 2,
+      }}
+    >
+      <AppText variant="label">{String(value ?? 0)}</AppText>
+      <AppText variant="caption" muted>
+        {label}
+      </AppText>
     </View>
   );
 }

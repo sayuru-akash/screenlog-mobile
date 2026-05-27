@@ -275,6 +275,9 @@ describe("mapTitleDetailPayload", () => {
                   name: "Secrets",
                   seasonNumber: 1,
                   episodeNumber: 1,
+                  runtime: 49,
+                  airDate: "2017-12-01T00:00:00.000Z",
+                  overview: "A missing child sets four families on edge.",
                   stillPath: "/still.jpg",
                 },
               ],
@@ -282,12 +285,36 @@ describe("mapTitleDetailPayload", () => {
           ],
         },
         userShow: { status: "WATCHING", isFavourite: false },
+        availability: {
+          region: "US",
+          providers: [
+            {
+              id: "provider-1",
+              name: "Netflix",
+              logoPath: "/netflix.jpg",
+              type: "FLATRATE",
+              selected: true,
+            },
+            { id: "provider-2", name: "Apple TV", type: "BUY" },
+          ],
+        },
         progress: [{ episodeId: "ep-1" }],
       }),
     ).toMatchObject({
       id: "show-1",
       type: "show",
       year: "2017",
+      provider: { name: "Netflix" },
+      providers: [
+        {
+          id: "provider-1",
+          name: "Netflix",
+          logoUrl: "https://image.tmdb.org/t/p/w500/netflix.jpg",
+          type: "FLATRATE",
+        },
+        { id: "provider-2", name: "Apple TV", type: "BUY" },
+      ],
+      providerRegion: "US",
       seasons: [
         {
           name: "Season 1",
@@ -297,6 +324,10 @@ describe("mapTitleDetailPayload", () => {
               title: "Secrets",
               episodeLabel: "S1E1",
               watched: true,
+              runtimeLabel: "49 min",
+              airDate: "2017-12-01T00:00:00.000Z",
+              overview: "A missing child sets four families on edge.",
+              stillUrl: "https://image.tmdb.org/t/p/w780/still.jpg",
             },
           ],
         },
@@ -346,12 +377,23 @@ describe("list and log wrappers", () => {
     });
     expect(
       mapLogPayload({
-        log: { id: "log-1", review: "Great", title: "Heat", rating: 9 },
+        log: {
+          id: "log-1",
+          review: "Great",
+          title: "Heat",
+          rating: 9,
+          rewatch: true,
+          user: { id: "user-1", username: "ada", name: "Ada" },
+          _count: { comments: 3 },
+        },
       }),
     ).toMatchObject({
       id: "log-1",
       body: "Great",
       rating: 9,
+      rewatch: true,
+      commentCount: 3,
+      user: { id: "user-1", username: "ada", name: "Ada" },
     });
   });
 });

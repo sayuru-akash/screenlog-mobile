@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { Heart, Pin, Play, RotateCcw, Trash2, X } from "lucide-react-native";
+import { Heart, ListPlus, Pin, Play, RotateCcw, X } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import {
   Alert,
@@ -41,6 +41,7 @@ import { useTheme } from "@/lib/theme";
 import type {
   CustomListSummary,
   MediaType,
+  ProviderSummary,
   SearchResult,
 } from "@/types/domain";
 
@@ -185,39 +186,51 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                 <AppText muted numberOfLines={4}>
                   {data.overview || "No overview yet."}
                 </AppText>
-                <ProviderChip provider={data.provider} />
                 <View
                   style={{
                     flexDirection: "row",
-                    flexWrap: "wrap",
                     gap: theme.spacing.sm,
                     alignItems: "center",
                   }}
                 >
+                  <View style={{ flex: 1 }}>
+                    <Button
+                      loading={progress.isPending || watchlistUpdate.isPending}
+                      disabled={type === "show" && !nextEpisode?.id}
+                      onPress={() => {
+                        if (type === "show" && nextEpisode?.id) {
+                          progress.mutate({
+                            action: "watch",
+                            episodeId: nextEpisode.id,
+                          });
+                        } else if (type === "movie") {
+                          review.mutate({
+                            type: "movie",
+                            movieId: id,
+                            rating: "",
+                            review: "",
+                            spoiler: false,
+                            rewatch: false,
+                            visibility,
+                            tags: "",
+                          });
+                        }
+                      }}
+                    >
+                      {type === "show"
+                        ? nextEpisode?.episodeLabel
+                          ? `Watch ${nextEpisode.episodeLabel}`
+                          : "Mark Next"
+                        : data.isWatched
+                          ? "Log Rewatch"
+                          : "Mark Watched"}
+                    </Button>
+                  </View>
                   <Button
-                    loading={progress.isPending || watchlistUpdate.isPending}
-                    disabled={type === "show" && !nextEpisode?.id}
-                    onPress={() => {
-                      if (type === "show" && nextEpisode?.id) {
-                        progress.mutate({
-                          action: "watch",
-                          episodeId: nextEpisode.id,
-                        });
-                      } else if (type === "movie") {
-                        review.mutate({
-                          type: "movie",
-                          movieId: id,
-                          rating: "",
-                          review: "",
-                          spoiler: false,
-                          rewatch: false,
-                          visibility,
-                          tags: "",
-                        });
-                      }
-                    }}
+                    variant="secondary"
+                    onPress={() => setReviewOpen(true)}
                   >
-                    {type === "show" ? "Mark Next" : "Mark Watched"}
+                    Review
                   </Button>
                   <IconButton
                     label={
@@ -242,82 +255,6 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                       }
                     />
                   </IconButton>
-                  {data.status ? (
-                    <IconButton
-                      label="Remove from watchlist"
-                      onPress={confirmRemove}
-                    >
-                      <Trash2 size={18} color={theme.colors.danger} />
-                    </IconButton>
-                  ) : null}
-                  <IconButton
-                    label="Pin to profile"
-                    onPress={() =>
-                      setPin.mutate({
-                        type: type === "show" ? "SHOW" : "MOVIE",
-                        showId: type === "show" ? id : undefined,
-                        movieId: type === "movie" ? id : undefined,
-                        rank: 0,
-                      })
-                    }
-                  >
-                    <Pin size={18} color={theme.colors.text} />
-                  </IconButton>
-                  <Button
-                    variant="secondary"
-                    onPress={() => setReviewOpen(true)}
-                  >
-                    Review
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onPress={() => setListPickerOpen(true)}
-                  >
-                    Add to list
-                  </Button>
-                  {data.status ? (
-                    <>
-                      {data.status !== "WATCHING" ? (
-                        <Button
-                          variant="ghost"
-                          onPress={() =>
-                            watchlistUpdate.mutate({
-                              ...titleToWatchlistInput(data),
-                              userStatus: "WATCHING",
-                            })
-                          }
-                        >
-                          Resume
-                        </Button>
-                      ) : null}
-                      {data.status !== "PAUSED" ? (
-                        <Button
-                          variant="ghost"
-                          onPress={() =>
-                            watchlistUpdate.mutate({
-                              ...titleToWatchlistInput(data),
-                              userStatus: "PAUSED",
-                            })
-                          }
-                        >
-                          Pause
-                        </Button>
-                      ) : null}
-                      {data.status !== "DROPPED" ? (
-                        <Button
-                          variant="danger"
-                          onPress={() =>
-                            watchlistUpdate.mutate({
-                              ...titleToWatchlistInput(data),
-                              userStatus: "DROPPED",
-                            })
-                          }
-                        >
-                          Drop
-                        </Button>
-                      ) : null}
-                    </>
-                  ) : null}
                 </View>
               </View>
             </View>
@@ -334,11 +271,126 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
             </AppText>
           )}
           <Section title="Availability">
-            {data.provider ? (
-              <ProviderChip provider={data.provider} />
+            {data.providers?.length || data.provider ? (
+              <ProviderList
+                providers={
+                  data.providers?.length ? data.providers : [data.provider!]
+                }
+                region={data.providerRegion}
+              />
             ) : (
-              <EmptyState title="No provider match yet" />
+              <EmptyState
+                title="No provider match yet"
+                body="Change your country or selected services in Settings to refine availability."
+              />
             )}
+          </Section>
+          <Section title="Actions">
+            <View style={{ gap: theme.spacing.sm }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                  gap: theme.spacing.sm,
+                }}
+              >
+                <Button
+                  variant="secondary"
+                  icon={<ListPlus size={15} color={theme.colors.accent} />}
+                  onPress={() => setListPickerOpen(true)}
+                >
+                  Add to list
+                </Button>
+                <Button
+                  variant="secondary"
+                  icon={<Pin size={15} color={theme.colors.accent} />}
+                  loading={setPin.isPending}
+                  onPress={() =>
+                    setPin.mutate({
+                      type: type === "show" ? "SHOW" : "MOVIE",
+                      showId: type === "show" ? id : undefined,
+                      movieId: type === "movie" ? id : undefined,
+                      rank: 0,
+                    })
+                  }
+                >
+                  Pin
+                </Button>
+                {type === "movie" && data.isWatched ? (
+                  <Button
+                    variant="ghost"
+                    icon={<RotateCcw size={15} color={theme.colors.text} />}
+                    loading={review.isPending}
+                    onPress={() =>
+                      review.mutate({
+                        type: "movie",
+                        movieId: id,
+                        rating: "",
+                        review: "",
+                        spoiler: false,
+                        rewatch: true,
+                        visibility,
+                        tags: "",
+                      })
+                    }
+                  >
+                    Rewatch
+                  </Button>
+                ) : null}
+              </View>
+              {data.status ? (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    gap: theme.spacing.sm,
+                  }}
+                >
+                  {data.status !== "WATCHING" ? (
+                    <Button
+                      variant="ghost"
+                      onPress={() =>
+                        watchlistUpdate.mutate({
+                          ...titleToWatchlistInput(data),
+                          userStatus: "WATCHING",
+                        })
+                      }
+                    >
+                      Resume
+                    </Button>
+                  ) : null}
+                  {data.status !== "PAUSED" ? (
+                    <Button
+                      variant="ghost"
+                      onPress={() =>
+                        watchlistUpdate.mutate({
+                          ...titleToWatchlistInput(data),
+                          userStatus: "PAUSED",
+                        })
+                      }
+                    >
+                      Pause
+                    </Button>
+                  ) : null}
+                  {data.status !== "DROPPED" ? (
+                    <Button
+                      variant="ghost"
+                      onPress={() =>
+                        watchlistUpdate.mutate({
+                          ...titleToWatchlistInput(data),
+                          userStatus: "DROPPED",
+                        })
+                      }
+                    >
+                      Drop
+                    </Button>
+                  ) : null}
+                  <Button variant="danger" onPress={confirmRemove}>
+                    Remove
+                  </Button>
+                </View>
+              ) : null}
+            </View>
           </Section>
           {type === "show" ? (
             <Section title="Progress">
@@ -423,8 +475,19 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                               </AppText>
                               <AppText muted>
                                 {episode.episodeLabel || "Episode"}
+                                {episode.runtimeLabel
+                                  ? ` · ${episode.runtimeLabel}`
+                                  : ""}
+                                {episode.airDate
+                                  ? ` · ${formatDate(episode.airDate)}`
+                                  : ""}
                                 {episode.watched ? " · watched" : ""}
                               </AppText>
+                              {episode.overview ? (
+                                <AppText muted numberOfLines={3}>
+                                  {episode.overview}
+                                </AppText>
+                              ) : null}
                             </View>
                             <Button
                               variant={episode.watched ? "ghost" : "secondary"}
@@ -573,6 +636,44 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
               <EmptyState title="No cast available" />
             )}
           </Section>
+          {extras.data?.crew?.length ? (
+            <Section title="Crew">
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    gap: theme.spacing.sm,
+                    paddingRight: theme.spacing.lg,
+                  }}
+                >
+                  {extras.data.crew.slice(0, 12).map((person) => (
+                    <View
+                      key={person.id}
+                      style={{
+                        minWidth: 140,
+                        maxWidth: 180,
+                        borderWidth: 1,
+                        borderColor: theme.colors.border,
+                        borderRadius: theme.radius.sm,
+                        backgroundColor: theme.colors.surface,
+                        padding: theme.spacing.md,
+                        gap: 3,
+                      }}
+                    >
+                      <AppText variant="label" numberOfLines={1}>
+                        {person.name}
+                      </AppText>
+                      {person.role ? (
+                        <AppText variant="caption" muted numberOfLines={2}>
+                          {person.role}
+                        </AppText>
+                      ) : null}
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+            </Section>
+          ) : null}
           {data.lists?.length ? (
             <Section title="Lists">
               <View style={{ gap: theme.spacing.sm }}>
@@ -772,6 +873,53 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
       ) : null}
     </Screen>
   );
+}
+
+function ProviderList({
+  providers,
+  region,
+}: {
+  providers: ProviderSummary[];
+  region?: string | null;
+}) {
+  const theme = useTheme();
+  return (
+    <View style={{ gap: theme.spacing.sm }}>
+      {region ? (
+        <AppText variant="caption" muted>
+          Availability in {region}
+        </AppText>
+      ) : null}
+      <View
+        style={{
+          flexDirection: "row",
+          flexWrap: "wrap",
+          gap: theme.spacing.sm,
+        }}
+      >
+        {providers.slice(0, 8).map((provider) => (
+          <ProviderChip
+            key={provider.id ?? provider.name}
+            provider={provider}
+          />
+        ))}
+      </View>
+      {providers.length > 8 ? (
+        <AppText variant="caption" muted>
+          +{providers.length - 8} more services
+        </AppText>
+      ) : null}
+    </View>
+  );
+}
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function ListPickerRow({

@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
 import { useState } from "react";
 import { Alert, Modal, Pressable, Switch, TextInput, View } from "react-native";
-import { Pencil, Pin, X } from "lucide-react-native";
+import { Pencil, Pin, Trash2, X } from "lucide-react-native";
 import { Button } from "@/components/primitives/Button";
 import { Screen } from "@/components/primitives/Screen";
 import {
@@ -46,6 +46,7 @@ export default function ListDetailScreen() {
   const search = useSearchQuery(q, "all");
   const items = toDisplayListItems(list.data?.items ?? []);
   const canEdit = Boolean(list.data?.canEdit);
+  const ownerUsername = list.data?.user?.username;
   const hasSearchResult = (result: {
     type: string;
     tmdbId?: number;
@@ -118,9 +119,33 @@ export default function ListDetailScreen() {
             borderRadius: theme.radius.md,
             backgroundColor: theme.colors.surface,
             padding: theme.spacing.lg,
-            gap: theme.spacing.sm,
+            gap: theme.spacing.md,
           }}
         >
+          <View style={{ flexDirection: "row", gap: theme.spacing.md }}>
+            <CoverStack covers={list.data.covers} title={list.data.title} />
+            <View style={{ flex: 1, gap: theme.spacing.xs }}>
+              <AppText variant="heading" numberOfLines={2}>
+                {list.data.title}
+              </AppText>
+              {ownerUsername ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open @${ownerUsername}`}
+                  onPress={() => router.push(`/user/${ownerUsername}`)}
+                >
+                  <AppText muted numberOfLines={1}>
+                    by @{ownerUsername}
+                  </AppText>
+                </Pressable>
+              ) : null}
+              {list.data.description ? (
+                <AppText muted numberOfLines={3}>
+                  {list.data.description}
+                </AppText>
+              ) : null}
+            </View>
+          </View>
           <AppText variant="caption" muted>
             {list.data.visibility?.toLowerCase() ?? "private"} · {items.length}{" "}
             titles
@@ -237,12 +262,18 @@ export default function ListDetailScreen() {
                       {item.note}
                     </AppText>
                   ) : null}
+                  {item.year ? (
+                    <AppText variant="caption" muted numberOfLines={1}>
+                      {item.year}
+                    </AppText>
+                  ) : null}
                 </View>
               </View>
             </Pressable>
             {canEdit ? (
-              <Button
-                variant="danger"
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Remove ${item.title}`}
                 onPress={() =>
                   Alert.alert(
                     "Remove title?",
@@ -257,9 +288,19 @@ export default function ListDetailScreen() {
                     ],
                   )
                 }
+                style={({ pressed }) => ({
+                  marginTop: theme.spacing.sm,
+                  minHeight: 36,
+                  borderRadius: theme.radius.sm,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: pressed ? 0.72 : 1,
+                })}
               >
-                Remove
-              </Button>
+                <Trash2 size={16} color={theme.colors.danger} />
+              </Pressable>
             ) : null}
           </View>
         ))}
@@ -421,6 +462,50 @@ export default function ListDetailScreen() {
         </Screen>
       </Modal>
     </Screen>
+  );
+}
+
+function CoverStack({ covers, title }: { covers?: string[]; title: string }) {
+  const theme = useTheme();
+  const visibleCovers = (covers ?? []).slice(0, 3);
+  return (
+    <View style={{ width: 92, height: 124 }}>
+      {visibleCovers.length ? (
+        visibleCovers.map((cover, index) => (
+          <Image
+            key={`${cover}-${index}`}
+            source={{ uri: cover }}
+            style={{
+              position: "absolute",
+              left: index * 14,
+              top: index * 6,
+              width: 68,
+              height: 102,
+              borderRadius: theme.radius.sm,
+              backgroundColor: theme.colors.surfaceMuted,
+              borderWidth: 1,
+              borderColor: theme.colors.surface,
+            }}
+            contentFit="cover"
+          />
+        ))
+      ) : (
+        <View
+          style={{
+            width: 78,
+            height: 110,
+            borderRadius: theme.radius.sm,
+            backgroundColor: theme.colors.surfaceMuted,
+            justifyContent: "flex-end",
+            padding: theme.spacing.sm,
+          }}
+        >
+          <AppText variant="caption" numberOfLines={3}>
+            {title}
+          </AppText>
+        </View>
+      )}
+    </View>
   );
 }
 

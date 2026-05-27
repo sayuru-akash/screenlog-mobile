@@ -151,10 +151,13 @@ export function mapTitleDetailPayload(type: MediaType, payload: unknown) {
       .filter(Boolean),
   );
   const title = normalizeTitleLike(source, type, userState);
+  const providers = providerList(raw.availability);
 
   return {
     ...title,
     provider: primaryProvider(raw.availability) ?? title.provider,
+    providers,
+    providerRegion: nullableString(asRecord(raw.availability).region),
     reviews: asArray(raw.reviews)
       .map(normalizeLog)
       .filter(Boolean) as ReviewSummary[],
@@ -586,6 +589,12 @@ function normalizeSeason(season: unknown, watchedIds: Set<unknown>) {
             : nullableString(ep.episodeLabel),
         watched: watchedIds.has(ep.id),
         stillUrl: tmdbImageUrl(ep.stillUrl ?? ep.stillPath, "w780"),
+        runtimeLabel:
+          numberOrUndefined(ep.runtime) !== undefined
+            ? `${numberOrUndefined(ep.runtime)} min`
+            : nullableString(ep.runtimeLabel),
+        airDate: nullableString(ep.airDate),
+        overview: nullableString(ep.overview),
       };
     }),
   };
@@ -665,6 +674,7 @@ function normalizeListItem(item: unknown) {
       raw.posterUrl ?? raw.posterPath ?? source.posterPath,
     ),
     note: nullableString(raw.note),
+    year: yearFrom(source.firstAirDate ?? source.releaseDate ?? source.year),
   };
 }
 
@@ -821,6 +831,7 @@ function normalizeLog(item: unknown): ReviewSummary | null {
   const show = asRecord(raw.show);
   const movie = asRecord(raw.movie);
   const episode = asRecord(raw.episode);
+  const user = asRecord(raw.user);
   const title = raw.title ?? show.title ?? movie.title ?? episode.name;
   const seasonNumber = numberOrUndefined(episode.seasonNumber);
   const episodeNumber = numberOrUndefined(episode.episodeNumber);
@@ -843,9 +854,19 @@ function normalizeLog(item: unknown): ReviewSummary | null {
     posterUrl: tmdbImageUrl(
       raw.posterUrl ?? raw.posterPath ?? movie.posterPath ?? show.posterPath,
     ),
+    rewatch: Boolean(raw.rewatch),
+    commentCount: numberOrUndefined(asRecord(raw._count).comments),
     reactionScore: numberOrUndefined(raw.reactionScore),
     userReaction: numberOrUndefined(raw.userReaction),
     canEdit: Boolean(raw.canEdit),
+    user: raw.user
+      ? {
+          id: nullableString(user.id) ?? undefined,
+          name: nullableString(user.name),
+          username: nullableString(user.username),
+          avatarUrl: tmdbImageUrl(user.avatarUrl ?? user.image),
+        }
+      : undefined,
   };
 }
 
@@ -864,20 +885,32 @@ function normalizeComment(item: unknown): ReviewSummary | null {
 }
 
 function primaryProvider(input: unknown): ProviderSummary | null {
-  const availability = asRecord(input);
   const provider =
-    asArray(availability.providers).find((item) => {
+    providerList(input).find((item) => {
       const record = asRecord(item);
       return record.selected;
-    }) ?? asArray(availability.providers)[0];
-  const raw = asRecord(provider);
-  if (!raw.id && !raw.name) return null;
-  return {
-    id: raw.id ? stringValue(raw.id) : undefined,
-    name: stringValue(raw.name, "Provider"),
-    logoUrl: tmdbImageUrl(raw.logoUrl ?? raw.logoPath),
-    type: nullableString(raw.type ?? raw.monetizationType),
-  };
+    }) ?? providerList(input)[0];
+  return provider ?? null;
+}
+
+function providerList(input: unknown): ProviderSummary[] {
+  const availability = asRecord(input);
+  return asArray(availability.providers)
+    .map((provider) => {
+      const raw = asRecord(provider);
+      if (!raw.id && !raw.name) return null;
+      return {
+        id: raw.id ? stringValue(raw.id) : undefined,
+        tmdbProviderId: numberOrUndefined(raw.tmdbProviderId),
+        name: stringValue(raw.name, "Provider"),
+        logoUrl: tmdbImageUrl(raw.logoUrl ?? raw.logoPath),
+        logoPath: nullableString(raw.logoPath),
+        displayPriority: numberOrUndefined(raw.displayPriority),
+        type: nullableString(raw.type ?? raw.monetizationType),
+        selected: Boolean(raw.selected),
+      };
+    })
+    .filter(Boolean) as ProviderSummary[];
 }
 
 function availabilityLabel(input: unknown) {

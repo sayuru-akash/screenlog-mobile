@@ -17,6 +17,9 @@ export type TitleDetailPayload = TitleSummary & {
       episodeLabel?: string | null;
       watched?: boolean;
       stillUrl?: string | null;
+      runtimeLabel?: string | null;
+      airDate?: string | null;
+      overview?: string | null;
     }>;
   }>;
   reviews?: ReviewSummary[];
