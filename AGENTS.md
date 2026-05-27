@@ -20,6 +20,8 @@ scope.
 - `DESIGN.md` - Native design system, UX rules, and screen behavior.
 - `README.md` - Human-facing setup and release documentation.
 - `AGENTS.md` - Agent-facing rules and guardrails.
+- `.env.example` - Safe public mobile environment template.
+- `.gitignore` - Local env, dependency, native build, and generated-file ignores.
 
 ## Build & Development Commands
 
@@ -99,6 +101,8 @@ eas submit --platform all
 - Keep SecureStore only for auth/session data.
 - Keep MMKV only for non-sensitive local cache metadata and preferences.
 - Use platform-native controls where available.
+- Use `@expo/ui` when it provides a better native control than a custom React
+  Native recreation.
 - Prefer bottom sheets and menus over dense inline action rows.
 - Do not duplicate backend validation rules manually when API schemas can be shared
   or generated.
@@ -167,6 +171,7 @@ Required smoke flows:
 - Only public config may use `EXPO_PUBLIC_*`.
 - Never call non-versioned app data endpoints from mobile except `/api/auth/*`.
 - Always attach `x-watchlog-client: watchlog-mobile` to `/api/v1` calls.
+- Treat the mobile header as a compatibility gate, not a security secret.
 - Treat all API responses as untrusted and validate important shapes.
 - Do not show raw server errors to users.
 - Respect spoiler flags in reviews and comments.
@@ -179,6 +184,7 @@ Required smoke flows:
   webview shell.
 - Do not fork Watchlog auth. Use Better Auth Expo.
 - Do not hardcode localhost outside environment examples.
+- Do not add shared mobile API secrets; public native app secrets can be extracted.
 - Do not hardcode iOS-only or Android-only UI behavior without platform guards.
 - Do not hide missing API coverage with mocked success states.
 - Do not mark work complete without running the relevant quality gate.
@@ -192,6 +198,13 @@ Required smoke flows:
 - `EXPO_PUBLIC_APP_NAME` - Public display name; use `Watchlog`.
 - `EXPO_PUBLIC_API_ORIGIN` - Watchlog backend origin.
 - `EXPO_PUBLIC_APP_SCHEME` - Deep-link scheme, default `watchlog`.
+- Backend runtime variables the mobile app depends on indirectly:
+  `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `TMDB_API_KEY`,
+  `CRON_SECRET`, `RESEND_API_KEY`, `AUTH_EMAIL_FROM`, `PUBLIC_APP_NAME`,
+  `PUBLIC_APP_URL`, and `MOBILE_APP_SCHEME`.
+- Optional backend variables to document but not require:
+  `TVMAZE_API_KEY` and `GEOIP_COUNTRY_HEADER`.
+- `.env.example` - Safe committed template for public mobile env values.
 - `src/lib/api-client.ts` - Shared fetch wrapper.
 - `src/lib/auth-client.ts` - Better Auth Expo client.
 - `src/lib/query-client.ts` - Query cache, retries, persistence policy.

@@ -24,7 +24,7 @@ Target versions as of 2026-05-26:
 - Expo SDK 56.
 - React Native 0.85.
 - React 19.2.
-- Expo Router 56.
+- Expo Router bundled with SDK 56.
 - TypeScript strict mode.
 - React Native New Architecture enabled.
 
@@ -37,6 +37,7 @@ Core libraries:
 - `zustand` only for small app UI/session preference state.
 - `expo-image` for posters, backdrops, people images, and provider logos.
 - `expo-notifications` for local/push notification plumbing.
+- `@expo/ui` for platform-native controls where it improves native feel.
 - `expo-haptics` for quiet success/destructive/action feedback.
 - `react-native-reanimated` and `react-native-gesture-handler` for native motion.
 - `@gorhom/bottom-sheet` for native action sheets and compact editors.
@@ -58,6 +59,24 @@ Production must set `EXPO_PUBLIC_API_ORIGIN` to the deployed Cloudflare Worker
 origin. The backend must set `MOBILE_APP_SCHEME=watchlog` so Better Auth trusts
 the app deep link scheme.
 
+Production backend variables required by the web repo:
+
+| Variable             | Production value or source          | Scope             |
+| -------------------- | ----------------------------------- | ----------------- |
+| `DATABASE_URL`       | Neon PostgreSQL connection string   | Secret/runtime    |
+| `BETTER_AUTH_SECRET` | Strong generated Better Auth secret | Secret/runtime    |
+| `BETTER_AUTH_URL`    | `https://watchlog.tv`               | Build and runtime |
+| `TMDB_API_KEY`       | TMDB server API token               | Secret/runtime    |
+| `CRON_SECRET`        | Strong generated cron bearer token  | Secret/runtime    |
+| `RESEND_API_KEY`     | Resend server API key               | Secret/runtime    |
+| `AUTH_EMAIL_FROM`    | `Watchlog <noreply@watchlog.tv>`    | Runtime           |
+| `PUBLIC_APP_NAME`    | `Watchlog`                          | Build and runtime |
+| `PUBLIC_APP_URL`     | `https://watchlog.tv`               | Build and runtime |
+| `MOBILE_APP_SCHEME`  | `watchlog`                          | Runtime           |
+
+`TVMAZE_API_KEY` and `GEOIP_COUNTRY_HEADER` are optional. Cloudflare country
+headers are recognized automatically.
+
 Auth remains canonical at:
 
 ```text
@@ -72,6 +91,24 @@ Versioned app data uses:
 
 `/api/v1` is a thin proxy over existing `/api/*` handlers. It exists to give the
 mobile app a stable API namespace without duplicating backend business logic.
+
+## Backend Safety Model
+
+The backend accepts mobile app data traffic only through `/api/v1/*` with:
+
+- A valid Better Auth session cookie for user-specific data.
+- Server-side authorization checks on profile, list, log, watchlist, and progress
+  ownership.
+- The exact mobile compatibility header `x-watchlog-client: watchlog-mobile`.
+
+The header blocks accidental or unsupported clients from using the app namespace,
+but it is not a secret because native app traffic can be inspected. Do not add a
+public mobile API key and treat it as security. If Watchlog needs to reject
+modified or unofficial apps later, add platform attestation at the backend edge:
+Apple App Attest or DeviceCheck for iOS and Google Play Integrity for Android.
+
+Safe first-version rule: protect users and writes with Better Auth, rate limits,
+input validation, ownership checks, and no mobile-embedded secrets.
 
 ## Auth Model
 
@@ -103,7 +140,7 @@ Authenticated app API requests must attach the Better Auth cookie:
 const headers = {
   Accept: "application/json",
   Cookie: authClient.getCookie(),
-  "X-Watchlog-Client": "watchlog-mobile",
+  "x-watchlog-client": "watchlog-mobile",
 };
 ```
 
@@ -112,7 +149,7 @@ For JSON mutations, also send:
 ```ts
 {
 	'Content-Type': 'application/json',
-	'X-Watchlog-Client': 'watchlog-mobile'
+	'x-watchlog-client': 'watchlog-mobile'
 }
 ```
 
@@ -122,6 +159,9 @@ sets the session cookie header from SecureStore.
 ## API Rules
 
 All `/api/v1` responses are JSON.
+
+Except for the `/api/v1` manifest, app data endpoints require
+`x-watchlog-client: watchlog-mobile`.
 
 Common status behavior:
 
@@ -161,57 +201,57 @@ Auth endpoints:
 
 App API endpoints:
 
-| Method   | Path                                                     | Purpose                                          |
-| -------- | -------------------------------------------------------- | ------------------------------------------------ |
-| `GET`    | `/api/v1`                                                | API manifest                                     |
-| `GET`    | `/api/v1/health`                                         | Lightweight service health                       |
-| `GET`    | `/api/v1/ready`                                          | Database readiness                               |
-| `GET`    | `/api/v1/watchlist`                                      | Current user's shows, movies, availability       |
-| `POST`   | `/api/v1/watchlist`                                      | Add/update show or movie watchlist item          |
-| `DELETE` | `/api/v1/watchlist`                                      | Remove show/movie and dependent progress         |
-| `GET`    | `/api/v1/up-next?filter=all`                             | Ranked Up Next recommendation set                |
-| `GET`    | `/api/v1/calendar?timezone=Asia/Colombo`                 | Upcoming unwatched episodes for tracked shows    |
-| `GET`    | `/api/v1/search?q=Inception`                             | TMDB search with availability enrichment         |
-| `POST`   | `/api/v1/lookup`                                         | Ensure/cross-map TMDB title to local ID          |
-| `GET`    | `/api/v1/discover`                                       | Discovery rows                                   |
-| `GET`    | `/api/v1/shows/:id`                                      | Show detail, seasons, progress, reviews, extras  |
-| `GET`    | `/api/v1/shows/:id/extras`                               | Show trailers, cast, crew, related, external IDs |
-| `GET`    | `/api/v1/movies/:id`                                     | Movie detail, reviews, extras, lists             |
+| Method   | Path                                                     | Purpose                                           |
+| -------- | -------------------------------------------------------- | ------------------------------------------------- |
+| `GET`    | `/api/v1`                                                | API manifest                                      |
+| `GET`    | `/api/v1/health`                                         | Lightweight service health                        |
+| `GET`    | `/api/v1/ready`                                          | Database readiness                                |
+| `GET`    | `/api/v1/watchlist`                                      | Current user's shows, movies, availability        |
+| `POST`   | `/api/v1/watchlist`                                      | Add/update show or movie watchlist item           |
+| `DELETE` | `/api/v1/watchlist`                                      | Remove show/movie and dependent progress          |
+| `GET`    | `/api/v1/up-next?filter=all`                             | Ranked Up Next recommendation set                 |
+| `GET`    | `/api/v1/calendar?timezone=Asia/Colombo`                 | Upcoming unwatched episodes for tracked shows     |
+| `GET`    | `/api/v1/search?q=Inception`                             | TMDB search with availability enrichment          |
+| `POST`   | `/api/v1/lookup`                                         | Ensure/cross-map TMDB title to local ID           |
+| `GET`    | `/api/v1/discover`                                       | Discovery rows                                    |
+| `GET`    | `/api/v1/shows/:id`                                      | Show detail, seasons, progress, reviews, extras   |
+| `GET`    | `/api/v1/shows/:id/extras`                               | Show trailers, cast, crew, related, external IDs  |
+| `GET`    | `/api/v1/movies/:id`                                     | Movie detail, reviews, extras, lists              |
 | `GET`    | `/api/v1/movies/:id/extras`                              | Movie trailers, cast, crew, related, external IDs |
-| `GET`    | `/api/v1/progress?showId=:id`                            | Episode progress for a show                      |
-| `GET`    | `/api/v1/progress`                                       | Recent watched episode progress across shows     |
-| `POST`   | `/api/v1/progress`                                       | Watch/unwatch episode, season, caught-up actions |
-| `GET`    | `/api/v1/providers?region=US`                            | Region provider catalog and selections           |
-| `POST`   | `/api/v1/providers`                                      | Save selected providers and monetization types   |
-| `GET`    | `/api/v1/availability?type=movie&tmdbId=27205&region=US` | Title availability                               |
-| `GET`    | `/api/v1/notifications`                                  | In-app notifications and unread count            |
-| `PATCH`  | `/api/v1/notifications`                                  | Mark selected/all notifications read             |
-| `GET`    | `/api/v1/notification-settings`                          | Notification preferences                         |
-| `POST`   | `/api/v1/notification-settings`                          | Save notification preferences                    |
-| `GET`    | `/api/v1/settings`                                       | User settings and preferences                    |
-| `POST`   | `/api/v1/settings`                                       | Save settings and profile defaults               |
-| `GET`    | `/api/v1/profile`                                        | Current user's profile, stats, activity calendar |
-| `POST`   | `/api/v1/profile/pins`                                   | Set one of three profile showcase pins           |
-| `GET`    | `/api/v1/users/:username`                                | Visibility-aware profile and activity calendar   |
-| `POST`   | `/api/v1/users/:username/follow`                         | Follow user                                      |
-| `DELETE` | `/api/v1/users/:username/follow`                         | Unfollow user                                    |
-| `GET`    | `/api/v1/feed`                                           | Followed users' visible activity                 |
-| `GET`    | `/api/v1/logs`                                           | Logs filtered by `showId`, `movieId`, `userId`   |
-| `POST`   | `/api/v1/logs`                                           | Create watch log/review                          |
-| `GET`    | `/api/v1/logs/:id`                                       | Read visible log/review                          |
-| `PATCH`  | `/api/v1/logs/:id`                                       | Update owned log/review                          |
-| `DELETE` | `/api/v1/logs/:id`                                       | Delete owned log/review                          |
-| `POST`   | `/api/v1/logs/:id/reaction`                              | Upvote/downvote/clear review vote                |
-| `GET`    | `/api/v1/logs/:id/comments`                              | List review comments                             |
-| `POST`   | `/api/v1/logs/:id/comments`                              | Create comment or one-level reply                |
-| `POST`   | `/api/v1/comments/:id/reaction`                          | Upvote/downvote/clear comment vote               |
-| `GET`    | `/api/v1/lists`                                          | Current or target user's visible custom lists    |
-| `POST`   | `/api/v1/lists`                                          | Create custom list                               |
-| `GET`    | `/api/v1/lists/:id`                                      | Read visible custom list                         |
-| `PATCH`  | `/api/v1/lists/:id`                                      | Update owned custom list                         |
-| `DELETE` | `/api/v1/lists/:id`                                      | Delete owned custom list                         |
-| `POST`   | `/api/v1/lists/:id/items`                                | Add show/movie item to custom list               |
-| `DELETE` | `/api/v1/lists/:id/items`                                | Remove show/movie item from custom list          |
+| `GET`    | `/api/v1/progress?showId=:id`                            | Episode progress for a show                       |
+| `GET`    | `/api/v1/progress`                                       | Recent watched episode progress across shows      |
+| `POST`   | `/api/v1/progress`                                       | Watch/unwatch episode, season, caught-up actions  |
+| `GET`    | `/api/v1/providers?region=US`                            | Region provider catalog and selections            |
+| `POST`   | `/api/v1/providers`                                      | Save selected providers and monetization types    |
+| `GET`    | `/api/v1/availability?type=movie&tmdbId=27205&region=US` | Title availability                                |
+| `GET`    | `/api/v1/notifications`                                  | In-app notifications and unread count             |
+| `PATCH`  | `/api/v1/notifications`                                  | Mark selected/all notifications read              |
+| `GET`    | `/api/v1/notification-settings`                          | Notification preferences                          |
+| `POST`   | `/api/v1/notification-settings`                          | Save notification preferences                     |
+| `GET`    | `/api/v1/settings`                                       | User settings and preferences                     |
+| `POST`   | `/api/v1/settings`                                       | Save settings and profile defaults                |
+| `GET`    | `/api/v1/profile`                                        | Current user's profile, stats, activity calendar  |
+| `POST`   | `/api/v1/profile/pins`                                   | Set one of three profile showcase pins            |
+| `GET`    | `/api/v1/users/:username`                                | Visibility-aware profile and activity calendar    |
+| `POST`   | `/api/v1/users/:username/follow`                         | Follow user                                       |
+| `DELETE` | `/api/v1/users/:username/follow`                         | Unfollow user                                     |
+| `GET`    | `/api/v1/feed`                                           | Followed users' visible activity                  |
+| `GET`    | `/api/v1/logs`                                           | Logs filtered by `showId`, `movieId`, `userId`    |
+| `POST`   | `/api/v1/logs`                                           | Create watch log/review                           |
+| `GET`    | `/api/v1/logs/:id`                                       | Read visible log/review                           |
+| `PATCH`  | `/api/v1/logs/:id`                                       | Update owned log/review                           |
+| `DELETE` | `/api/v1/logs/:id`                                       | Delete owned log/review                           |
+| `POST`   | `/api/v1/logs/:id/reaction`                              | Upvote/downvote/clear review vote                 |
+| `GET`    | `/api/v1/logs/:id/comments`                              | List review comments                              |
+| `POST`   | `/api/v1/logs/:id/comments`                              | Create comment or one-level reply                 |
+| `POST`   | `/api/v1/comments/:id/reaction`                          | Upvote/downvote/clear comment vote                |
+| `GET`    | `/api/v1/lists`                                          | Current or target user's visible custom lists     |
+| `POST`   | `/api/v1/lists`                                          | Create custom list                                |
+| `GET`    | `/api/v1/lists/:id`                                      | Read visible custom list                          |
+| `PATCH`  | `/api/v1/lists/:id`                                      | Update owned custom list                          |
+| `DELETE` | `/api/v1/lists/:id`                                      | Delete owned custom list                          |
+| `POST`   | `/api/v1/lists/:id/items`                                | Add show/movie item to custom list                |
+| `DELETE` | `/api/v1/lists/:id/items`                                | Remove show/movie item from custom list           |
 
 Server-only endpoint, not for the app:
 
@@ -227,10 +267,19 @@ Add or update watchlist item:
 {
   "type": "movie",
   "tmdbId": 27205,
+  "title": "Inception",
+  "overview": "Optional fallback from search result.",
+  "posterPath": "/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg",
+  "releaseDate": "2010-07-15",
+  "genres": ["Action", "Science Fiction"],
+  "runtime": 148,
   "userStatus": "PLAN_TO_WATCH",
   "isFavourite": false
 }
 ```
+
+When adding from search, send fallback metadata for shows and movies. The backend
+can then create a local shell if full TMDB hydration is slow or unavailable.
 
 Remove watchlist item:
 
@@ -269,6 +318,36 @@ Create log or review:
   "visibility": "PUBLIC"
 }
 ```
+
+Update an owned log/review:
+
+```json
+{
+  "rating": 9,
+  "review": "Sharper on rewatch.",
+  "spoiler": false,
+  "visibility": "PUBLIC",
+  "tags": ["rewatch"]
+}
+```
+
+Create comment or one-level reply:
+
+```json
+{
+  "body": "Agreed on the ending.",
+  "spoiler": false,
+  "parentId": "optional_parent_comment_id"
+}
+```
+
+React to a review or comment:
+
+```json
+{ "value": 1 }
+```
+
+Use `1` for upvote, `-1` for downvote, and `0` to clear the current reaction.
 
 Create custom list:
 
@@ -329,6 +408,38 @@ Settings:
 }
 ```
 
+Notification settings:
+
+```json
+{
+  "inAppEnabled": true,
+  "newEpisodeAlerts": true,
+  "seasonPremiereAlerts": true,
+  "staleWatchlistReminders": true,
+  "staleWatchlistDays": 21
+}
+```
+
+Mark notifications read:
+
+```json
+{ "ids": ["notification_id"] }
+```
+
+Omit `ids` to mark all current notifications as read.
+
+Set profile pin:
+
+```json
+{
+  "type": "LIST",
+  "listId": "custom_list_id",
+  "rank": 0
+}
+```
+
+`type` can be `LOG`, `LIST`, `SHOW`, or `MOVIE`; `rank` is `0`, `1`, or `2`.
+
 Profile activity calendar day:
 
 ```json
@@ -384,11 +495,11 @@ Required app screens:
 
 - Every existing web feature has a mobile route or native surface.
 - No mobile-only data model or duplicated backend workflow is introduced.
+- `.env.example` exists and contains only safe `EXPO_PUBLIC_*` values.
 - Auth persists across app restarts using Better Auth Expo and SecureStore.
 - Session expiry returns the user to sign in without losing unsent local form text.
 - All mutating API requests use `/api/v1`, JSON, session cookie, and mobile header.
-- The mobile header value is exact and lowercase: `x-watchlog-client:
-  watchlog-mobile`.
+- The mobile header value is exact and lowercase: `x-watchlog-client: watchlog-mobile`.
 - Search and detail pages degrade gracefully when TMDB, providers, trailers, images,
   or cast data are missing.
 - Streaming provider logos use cached remote images and accessible text labels.

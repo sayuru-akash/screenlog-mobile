@@ -43,6 +43,7 @@ interface built with Expo and React Native.
 | Secure storage     | Expo SecureStore              | Session cookie and auth cache                            |
 | Images             | Expo Image                    | Poster/backdrop/provider image caching                   |
 | Lists              | FlashList                     | Fast large lists for watchlists, comments, logs          |
+| Native controls    | Expo UI                       | Platform-native controls where available                 |
 | Motion             | Reanimated, Gesture Handler   | Native gestures, sheets, and transitions                 |
 | Native affordances | Haptics, Blur, Notifications  | Platform feel without heavy UI kits                      |
 | Builds             | EAS Build and Submit          | iOS and Android signing, store builds, preview builds    |
@@ -52,7 +53,7 @@ interface built with Expo and React Native.
 Create the repo from Expo's SDK 56 template:
 
 ```sh
-npx create-expo-app@latest watchlog-mobile --template default@sdk-56
+npx create-expo-app@latest watchlog-mobile --template default
 cd watchlog-mobile
 ```
 
@@ -60,9 +61,9 @@ Install required runtime dependencies:
 
 ```sh
 npm install better-auth @better-auth/expo @tanstack/react-query zustand zod
-npm install expo-secure-store expo-image expo-notifications expo-haptics expo-blur
-npm install react-native-gesture-handler react-native-reanimated @gorhom/bottom-sheet
-npm install @shopify/flash-list react-native-mmkv
+npx expo install expo-secure-store expo-image expo-notifications expo-haptics expo-blur
+npx expo install @expo/ui react-native-gesture-handler react-native-reanimated
+npx expo install @gorhom/bottom-sheet @shopify/flash-list react-native-mmkv
 ```
 
 Install development tooling:
@@ -79,29 +80,43 @@ npx eas-cli@latest init
 
 ## Environment
 
-Create `.env.local`:
+Copy the committed example and edit only local values:
 
 ```sh
-EXPO_PUBLIC_APP_NAME=Watchlog
-EXPO_PUBLIC_API_ORIGIN=http://localhost:5173
-EXPO_PUBLIC_APP_SCHEME=watchlog
+cp .env.example .env.local
 ```
 
 Production builds must set `EXPO_PUBLIC_API_ORIGIN` to the deployed Watchlog
 Cloudflare Worker origin, keep `EXPO_PUBLIC_APP_SCHEME=watchlog`, and keep
 `EXPO_PUBLIC_APP_NAME=Watchlog`.
 
+Only `EXPO_PUBLIC_*` values belong in the mobile app. Backend secrets stay in the
+Watchlog web/worker environment and must never be copied into this repo.
+
 ## Backend Setup Required
 
 The Watchlog backend must have:
 
+- `DATABASE_URL`.
+- `BETTER_AUTH_SECRET`.
+- `BETTER_AUTH_URL=https://watchlog.tv`.
 - `MOBILE_APP_SCHEME=watchlog`.
+- `TMDB_API_KEY`.
+- `CRON_SECRET`.
+- `RESEND_API_KEY` and `AUTH_EMAIL_FROM` for production auth email.
+- `PUBLIC_APP_NAME=Watchlog`.
+- `PUBLIC_APP_URL=https://watchlog.tv`.
+- Optional backend keys: `TVMAZE_API_KEY` and `GEOIP_COUNTRY_HEADER`.
 - Better Auth Expo server plugin enabled.
 - `/api/v1` app API enabled.
-- `BETTER_AUTH_URL` and `PUBLIC_APP_URL` set to the deployed origin.
-- Cloudflare secrets configured for database, auth, TMDB, email, and cron.
+- `/api/v1/*` app data requests require `x-watchlog-client: watchlog-mobile`.
 - `/api/v1/shows/:id/extras` and `/api/v1/movies/:id/extras` enabled for
   trailers, cast, crew, related titles, and external links.
+
+The mobile client header is a compatibility gate, not a secret. User data is
+protected by Better Auth sessions and server-side authorization. A public native
+app cannot safely hide a shared API key; blocking modified/unofficial apps requires
+platform attestation such as Apple App Attest and Google Play Integrity.
 
 ## Auth Client
 
@@ -131,7 +146,7 @@ All app API calls should include:
 {
 	Accept: 'application/json',
 	Cookie: authClient.getCookie(),
-	'X-Watchlog-Client': 'watchlog-mobile'
+	'x-watchlog-client': 'watchlog-mobile'
 }
 ```
 
@@ -154,6 +169,8 @@ Use the versioned app API for Watchlog data:
 ```text
 /api/v1/*
 ```
+
+All `/api/v1/*` calls need `x-watchlog-client: watchlog-mobile`.
 
 Read [SPEC.md](SPEC.md) for the full endpoint map and payloads.
 

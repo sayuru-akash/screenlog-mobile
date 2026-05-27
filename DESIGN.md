@@ -18,6 +18,8 @@ Open app -> know what to watch next -> act in one or two taps.
 
 - Prioritize the next useful action over showing every possible action.
 - Use native screens, sheets, and menus instead of dense web-style button rows.
+- Use `@expo/ui` for native controls where it improves platform feel without
+  fragmenting the design system.
 - Keep title artwork visible but never let overlays make posters/backdrops unreadable.
 - Show provider logos with labels where space allows; never show anonymous logo-only
   controls when the logo is actionable.
