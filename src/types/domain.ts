@@ -29,6 +29,7 @@ export type TitleSummary = {
   overview?: string | null;
   posterUrl?: string | null;
   backdropUrl?: string | null;
+  episodeStillUrl?: string | null;
   progressLabel?: string | null;
   nextLabel?: string | null;
   nextEpisodeId?: string | null;

@@ -101,6 +101,8 @@ describe("mapUpNextPayload", () => {
           title: "Silo",
           subtitle: "S1E2 · Holston's Pick",
           posterPath: "/silo.jpg",
+          backdropPath: "/show-backdrop.jpg",
+          stillPath: "/episode-still.jpg",
           progress: { watched: 1, total: 10, nextEpisodeId: "episode-2" },
         },
         items: [
@@ -120,6 +122,8 @@ describe("mapUpNextPayload", () => {
         nextLabel: "S1E2 · Holston's Pick",
         progressLabel: "1/10 watched",
         nextEpisodeId: "episode-2",
+        backdropUrl: "https://image.tmdb.org/t/p/w780/show-backdrop.jpg",
+        episodeStillUrl: "https://image.tmdb.org/t/p/w780/episode-still.jpg",
       },
       continueWatching: [
         { id: "movie-1", type: "movie", runtimeLabel: "117 min" },

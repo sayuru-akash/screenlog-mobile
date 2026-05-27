@@ -23,6 +23,8 @@ export function ProviderChip({
         alignSelf: "flex-start",
         minHeight: compact ? 26 : 30,
         maxWidth: "100%",
+        minWidth: 0,
+        flexShrink: 1,
         flexDirection: "row",
         alignItems: "center",
         gap: theme.spacing.xs,
@@ -37,14 +39,20 @@ export function ProviderChip({
       {logoUrl ? (
         <Image
           source={{ uri: logoUrl }}
-          style={{ width: 18, height: 18, borderRadius: 4 }}
+          style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0 }}
           contentFit="cover"
         />
       ) : null}
       <AppText
         variant="caption"
         numberOfLines={1}
-        style={{ color: theme.colors.success }}
+        ellipsizeMode="tail"
+        style={{
+          color: theme.colors.success,
+          flexShrink: 1,
+          minWidth: 0,
+          maxWidth: compact ? 128 : 220,
+        }}
       >
         {provider.name}
       </AppText>

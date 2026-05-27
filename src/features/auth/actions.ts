@@ -1,7 +1,8 @@
 import { authClient } from "@/lib/auth-client";
 import { getPublicConfig } from "@/lib/api-client";
+import { getAuthErrorMessage, type AuthErrorLike } from "./errors";
 
-type AuthResult = { error?: { message?: string } | null };
+type AuthResult = { error?: AuthErrorLike | null };
 type AuthApi = {
   signIn?: {
     email?: (input: { email: string; password: string }) => Promise<AuthResult>;
@@ -11,6 +12,7 @@ type AuthApi = {
       email: string;
       password: string;
       name: string;
+      callbackURL?: string;
     }) => Promise<AuthResult>;
   };
   signOut?: () => Promise<AuthResult>;
@@ -39,7 +41,12 @@ export async function signUpWithEmail(
   password: string,
 ) {
   const signUp = requireAuthMethod(api.signUp?.email, "signUp.email");
-  const result = await signUp({ name, email, password });
+  const result = await signUp({
+    name,
+    email,
+    password,
+    callbackURL: buildAuthCallbackUrl("sign-in"),
+  });
   throwIfAuthError(result);
 }
 
@@ -54,10 +61,9 @@ export async function requestPasswordReset(email: string) {
     api.requestPasswordReset,
     "requestPasswordReset",
   );
-  const { appScheme } = getPublicConfig();
   const result = await requestReset({
     email,
-    redirectTo: `${appScheme}://reset-password`,
+    redirectTo: buildAuthCallbackUrl("reset-password"),
   });
   throwIfAuthError(result);
 }
@@ -85,6 +91,10 @@ function requireAuthMethod<
 }
 
 function throwIfAuthError(result: AuthResult | undefined) {
-  if (result?.error)
-    throw new Error(result.error.message || "Authentication failed");
+  if (result?.error) throw new Error(getAuthErrorMessage(result.error));
+}
+
+function buildAuthCallbackUrl(path: "reset-password" | "sign-in") {
+  const { appScheme } = getPublicConfig();
+  return `${appScheme}://${path}`;
 }

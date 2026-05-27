@@ -491,10 +491,8 @@ function normalizeUpNextItem(item: unknown): TitleSummary | null {
     ),
     overview: nullableString(raw.overview),
     posterUrl: tmdbImageUrl(raw.posterPath ?? raw.posterUrl),
-    backdropUrl: tmdbImageUrl(
-      raw.backdropPath ?? raw.backdropUrl ?? raw.stillPath,
-      "w780",
-    ),
+    backdropUrl: tmdbImageUrl(raw.backdropPath ?? raw.backdropUrl, "w780"),
+    episodeStillUrl: tmdbImageUrl(raw.stillPath ?? raw.stillUrl, "w780"),
     nextLabel: nullableString(raw.subtitle),
     progressLabel:
       watched !== undefined && total !== undefined

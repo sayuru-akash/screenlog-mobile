@@ -31,6 +31,10 @@ export default function HomeScreen() {
   const watchlistUpdate = useWatchlistUpdateMutation();
   const data = home.data;
   const upNext = data?.upNext;
+  const upNextHeroUrl =
+    upNext?.type === "show"
+      ? upNext.episodeStillUrl || upNext.backdropUrl || upNext.posterUrl
+      : upNext?.backdropUrl || upNext?.posterUrl;
   return (
     <Screen
       title="Watchlog"
@@ -68,15 +72,23 @@ export default function HomeScreen() {
               })}
             >
               <View style={{ minHeight: 260 }}>
-                {upNext.backdropUrl || upNext.posterUrl ? (
+                {upNextHeroUrl ? (
                   <Image
                     source={{
-                      uri: upNext.backdropUrl || upNext.posterUrl || undefined,
+                      uri: upNextHeroUrl,
                     }}
                     style={{ position: "absolute", inset: 0 }}
                     contentFit="cover"
                   />
-                ) : null}
+                ) : (
+                  <View
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      backgroundColor: theme.colors.surfaceMuted,
+                    }}
+                  />
+                )}
                 <View
                   style={{
                     flex: 1,

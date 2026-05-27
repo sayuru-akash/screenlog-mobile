@@ -1,14 +1,15 @@
 import { useLocalSearchParams, router } from "expo-router";
 import { useState } from "react";
-import { TextInput, View } from "react-native";
+import resetCharacter from "../../assets/auth/reset-character.png";
+import {
+  AuthInput,
+  AuthMessage,
+  AuthScaffold,
+} from "@/components/auth/AuthScaffold";
 import { Button } from "@/components/primitives/Button";
-import { Screen } from "@/components/primitives/Screen";
-import { AppText } from "@/components/primitives/Text";
 import { resetPassword } from "@/features/auth/actions";
-import { useTheme } from "@/lib/theme";
 
 export default function ResetPasswordScreen() {
-  const theme = useTheme();
   const { token } = useLocalSearchParams<{ token?: string }>();
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -28,33 +29,32 @@ export default function ResetPasswordScreen() {
   }
 
   return (
-    <Screen title="New password" subtitle="Choose at least eight characters.">
-      <View style={{ gap: theme.spacing.md }}>
-        <TextInput
-          accessibilityLabel="New password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          style={{
-            minHeight: 48,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            borderRadius: theme.radius.sm,
-            paddingHorizontal: theme.spacing.md,
-            color: theme.colors.text,
-            backgroundColor: theme.colors.surface,
-            fontSize: 16,
-          }}
-        />
-        {message ? <AppText muted>{message}</AppText> : null}
-        <Button
-          loading={loading}
-          disabled={!token || password.length < 8}
-          onPress={() => void submit()}
-        >
-          Save Password
-        </Button>
-      </View>
-    </Screen>
+    <AuthScaffold
+      title="New password"
+      subtitle="Choose at least eight characters for your Watchlog account."
+      art={resetCharacter}
+      backHref="/(auth)/sign-in"
+    >
+      <AuthInput
+        label="New password"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+        textContentType="newPassword"
+      />
+      {!token ? (
+        <AuthMessage tone="danger">
+          This reset link is missing a valid token.
+        </AuthMessage>
+      ) : null}
+      {message ? <AuthMessage tone="danger">{message}</AuthMessage> : null}
+      <Button
+        loading={loading}
+        disabled={!token || password.length < 8}
+        onPress={() => void submit()}
+      >
+        Save Password
+      </Button>
+    </AuthScaffold>
   );
 }
