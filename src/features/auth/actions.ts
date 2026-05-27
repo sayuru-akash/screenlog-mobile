@@ -9,6 +9,7 @@ type AuthApi = {
   signOut?: () => Promise<AuthResult>;
   requestPasswordReset?: (input: { email: string; redirectTo?: string }) => Promise<AuthResult>;
   resetPassword?: (input: { newPassword: string; token: string }) => Promise<AuthResult>;
+  deleteUser?: () => Promise<AuthResult>;
 };
 
 const api = authClient as AuthApi;
@@ -35,6 +36,11 @@ export async function requestPasswordReset(email: string) {
 
 export async function resetPassword(token: string, newPassword: string) {
   const result = await api.resetPassword?.({ token, newPassword });
+  throwIfAuthError(result);
+}
+
+export async function requestAccountDeletion() {
+  const result = await api.deleteUser?.();
   throwIfAuthError(result);
 }
 

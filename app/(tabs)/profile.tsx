@@ -7,7 +7,9 @@ import { Section } from "@/components/primitives/Section";
 import { EmptyState, ErrorState, IconButton, LoadingState } from "@/components/primitives/StateViews";
 import { AppText } from "@/components/primitives/Text";
 import { ActivityCalendar } from "@/components/profile/ActivityCalendar";
+import { TitleRail } from "@/components/content/TitleRail";
 import { useProfileQuery } from "@/features/profile/queries";
+import { signOut } from "@/features/auth/actions";
 import { initials } from "@/lib/format";
 import { useTheme } from "@/lib/theme";
 
@@ -56,9 +58,15 @@ export default function ProfileScreen() {
             <Button variant="ghost" onPress={() => router.push("/feed")}>
               Feed
             </Button>
+            <Button variant="danger" onPress={() => void signOut().then(() => router.replace("/(auth)/sign-in"))}>
+              Sign Out
+            </Button>
           </View>
           <Section title="Activity">
             <ActivityCalendar days={profile.data?.calendar} />
+          </Section>
+          <Section title="Pinned">
+            <TitleRail items={profile.data?.pinned} empty="Pin up to three titles." />
           </Section>
           <Section title="Stats">
             {profile.data?.stats ? (

@@ -27,6 +27,7 @@ export type TitleSummary = {
   backdropUrl?: string | null;
   progressLabel?: string | null;
   nextLabel?: string | null;
+  nextEpisodeId?: string | null;
   runtimeLabel?: string | null;
   status?: WatchStatus | (string & {}) | null;
   isFavourite?: boolean;
@@ -145,4 +146,18 @@ export type SettingsPayload = {
   defaultListVisibility?: Visibility;
   username?: string | null;
   bio?: string | null;
+};
+
+export type NotificationSettingsPayload = {
+  inAppEnabled: boolean;
+  newEpisodeAlerts: boolean;
+  seasonPremiereAlerts: boolean;
+  staleWatchlistReminders: boolean;
+  staleWatchlistDays: number;
+};
+
+export type ProviderSettingsPayload = {
+  region: string;
+  providerIds: string[];
+  streamingTypes: Array<"FLATRATE" | "FREE" | "ADS" | "RENT" | "BUY">;
 };

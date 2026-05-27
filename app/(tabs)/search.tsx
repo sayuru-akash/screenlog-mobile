@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { useState } from "react";
 import { TextInput, View } from "react-native";
 import { Check, Plus } from "lucide-react-native";
@@ -45,6 +46,9 @@ export default function SearchScreen() {
           </Button>
         ))}
       </View>
+      <Button variant="secondary" onPress={() => router.push("/discover")}>
+        Discover
+      </Button>
       {q.trim().length < 2 ? <EmptyState title="Type to search" body="Two or more characters." /> : null}
       {search.isLoading ? <LoadingState label="Searching" /> : null}
       {search.isError ? <ErrorState message={search.error.message} onRetry={() => void search.refetch()} /> : null}

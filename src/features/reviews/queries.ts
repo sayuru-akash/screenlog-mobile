@@ -30,3 +30,54 @@ export function useReactionMutation(kind: "logs" | "comments", id: string) {
     },
   });
 }
+
+export function useCreateCommentMutation(logId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (comment: { body: string; spoiler: boolean; parentId?: string | null }) =>
+      authedApiRequest(`/logs/${logId}/comments`, {
+        method: "POST",
+        body: {
+          body: comment.body.trim(),
+          spoiler: comment.spoiler,
+          parentId: comment.parentId ?? null,
+        },
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.comments(logId) });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.log(logId) });
+    },
+  });
+}
+
+export function useUpdateLogMutation(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (patch: { rating?: number | null; review?: string | null; spoiler?: boolean }) =>
+      authedApiRequest(`/logs/${id}`, {
+        method: "PATCH",
+        body: patch,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.log(id) });
+      await queryClient.invalidateQueries({ queryKey: ["title"] });
+      await queryClient.invalidateQueries({ queryKey: ["profile"] });
+    },
+  });
+}
+
+export function useDeleteLogMutation(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      authedApiRequest(`/logs/${id}`, {
+        method: "DELETE",
+        body: {},
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["title"] });
+      await queryClient.invalidateQueries({ queryKey: ["profile"] });
+      await queryClient.invalidateQueries({ queryKey: ["feed"] });
+    },
+  });
+}

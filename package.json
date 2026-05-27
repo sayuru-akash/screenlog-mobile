@@ -28,6 +28,7 @@
     "expo": "^56.0.5",
     "expo-blur": "^56.0.3",
     "expo-constants": "^56.0.16",
+    "expo-dev-client": "~56.0.16",
     "expo-haptics": "^56.0.3",
     "expo-image": "^56.0.9",
     "expo-linking": "^56.0.12",

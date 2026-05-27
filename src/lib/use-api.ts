@@ -8,6 +8,11 @@ export async function authedApiRequest<TResponse>(
   path: string,
   options: Omit<ApiRequestOptions, "cookie"> = {},
 ) {
+  if (options.method && options.method !== "GET") {
+    const network = await NetInfo.fetch();
+    assertOnlineForMutation({ isConnected: network.isConnected });
+  }
+
   return apiRequest<TResponse>(path, {
     ...options,
     cookie: getAuthCookie(),

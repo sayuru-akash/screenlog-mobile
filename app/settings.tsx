@@ -5,15 +5,31 @@ import { Screen } from "@/components/primitives/Screen";
 import { Section } from "@/components/primitives/Section";
 import { ErrorState, LoadingState } from "@/components/primitives/StateViews";
 import { AppText } from "@/components/primitives/Text";
-import { useSaveSettingsMutation, useSettingsQuery } from "@/features/settings/queries";
+import { requestAccountDeletion } from "@/features/auth/actions";
+import {
+  useNotificationSettingsQuery,
+  useProvidersQuery,
+  useSaveNotificationSettingsMutation,
+  useSaveProvidersMutation,
+  useSaveSettingsMutation,
+  useSettingsQuery,
+} from "@/features/settings/queries";
 import { useTheme } from "@/lib/theme";
-import type { SettingsPayload } from "@/types/domain";
+import type { NotificationSettingsPayload, ProviderSettingsPayload, SettingsPayload } from "@/types/domain";
 
 export default function SettingsScreen() {
   const theme = useTheme();
   const settings = useSettingsQuery();
+  const notificationSettings = useNotificationSettingsQuery();
+  const providers = useProvidersQuery(settings.data?.preferences?.region ?? "US");
   const save = useSaveSettingsMutation();
+  const saveNotifications = useSaveNotificationSettingsMutation();
+  const saveProviders = useSaveProvidersMutation();
   const [draft, setDraft] = useState<SettingsPayload>({});
+  const [notificationDraft, setNotificationDraft] = useState<Partial<NotificationSettingsPayload>>({});
+  const [providerDraft, setProviderDraft] = useState<Partial<ProviderSettingsPayload>>({});
+  const [deleteArmed, setDeleteArmed] = useState(false);
+  const [deleteMessage, setDeleteMessage] = useState("");
   const preferences = settings.data?.preferences ?? {};
   const mergedDraft: SettingsPayload = {
     theme: "system",
@@ -21,6 +37,21 @@ export default function SettingsScreen() {
     timezone: "Asia/Colombo",
     ...preferences,
     ...draft,
+  };
+  const mergedNotifications: NotificationSettingsPayload = {
+    inAppEnabled: true,
+    newEpisodeAlerts: true,
+    seasonPremiereAlerts: true,
+    staleWatchlistReminders: true,
+    staleWatchlistDays: 21,
+    ...notificationSettings.data,
+    ...notificationDraft,
+  };
+  const mergedProviders: ProviderSettingsPayload = {
+    region: mergedDraft.region || "US",
+    providerIds: [],
+    streamingTypes: ["FLATRATE", "FREE"],
+    ...providerDraft,
   };
 
   return (
@@ -48,6 +79,93 @@ export default function SettingsScreen() {
       <Button loading={save.isPending} onPress={() => save.mutate(mergedDraft)}>
         Save Settings
       </Button>
+      <Section title="Notifications">
+        {([
+          ["inAppEnabled", "In-app"],
+          ["newEpisodeAlerts", "New episodes"],
+          ["seasonPremiereAlerts", "Season premieres"],
+          ["staleWatchlistReminders", "Quiet reminders"],
+        ] satisfies Array<[keyof NotificationSettingsPayload, string]>).map(([key, label]) => (
+          <View key={key} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <AppText>{label}</AppText>
+            <Switch
+              value={Boolean(mergedNotifications[key as keyof NotificationSettingsPayload])}
+              onValueChange={(enabled) =>
+                setNotificationDraft((value) => ({
+                  ...value,
+                  [key]: enabled,
+                }))
+              }
+            />
+          </View>
+        ))}
+        <Input
+          label="Reminder days"
+          value={String(mergedNotifications.staleWatchlistDays)}
+          keyboardType="number-pad"
+          onChangeText={(staleWatchlistDays) =>
+            setNotificationDraft((value) => ({
+              ...value,
+              staleWatchlistDays: Number.parseInt(staleWatchlistDays, 10) || 21,
+            }))
+          }
+        />
+        {saveNotifications.isError ? <AppText style={{ color: theme.colors.danger }}>{saveNotifications.error.message}</AppText> : null}
+        <Button loading={saveNotifications.isPending} onPress={() => saveNotifications.mutate(mergedNotifications)}>
+          Save Notifications
+        </Button>
+      </Section>
+      <Section title="Providers">
+        <AppText muted>{providers.data?.providers?.length ?? 0} services available for {mergedProviders.region}.</AppText>
+        <Input
+          label="Provider IDs"
+          value={mergedProviders.providerIds.join(",")}
+          placeholder="8,9,337"
+          onChangeText={(providerIds) =>
+            setProviderDraft((value) => ({
+              ...value,
+              providerIds: providerIds
+                .split(",")
+                .map((id) => id.trim())
+                .filter(Boolean),
+            }))
+          }
+        />
+        {saveProviders.isError ? <AppText style={{ color: theme.colors.danger }}>{saveProviders.error.message}</AppText> : null}
+        <Button loading={saveProviders.isPending} onPress={() => saveProviders.mutate(mergedProviders)}>
+          Save Providers
+        </Button>
+      </Section>
+      <Section title="Account">
+        <AppText muted>Deletion requires email confirmation.</AppText>
+        {deleteMessage ? <AppText style={{ color: theme.colors.danger }}>{deleteMessage}</AppText> : null}
+        {!deleteArmed ? (
+          <Button variant="danger" onPress={() => setDeleteArmed(true)}>
+            Delete Account
+          </Button>
+        ) : (
+          <View style={{ gap: theme.spacing.sm }}>
+            <Button
+              variant="danger"
+              onPress={() =>
+                void requestAccountDeletion()
+                  .then(() => {
+                    setDeleteMessage("Check your email to confirm deletion.");
+                    setDeleteArmed(false);
+                  })
+                  .catch((error: unknown) => {
+                    setDeleteMessage(error instanceof Error ? error.message : "Deletion request failed");
+                  })
+              }
+            >
+              Confirm Deletion
+            </Button>
+            <Button variant="ghost" onPress={() => setDeleteArmed(false)}>
+              Cancel
+            </Button>
+          </View>
+        )}
+      </Section>
     </Screen>
   );
 }

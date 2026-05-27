@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { authedApiRequest } from "@/lib/use-api";
 import type { CustomListDetail, CustomListSummary, SearchResult } from "@/types/domain";
+import { buildListCreatePayload, buildListItemPayload, type ListDraft } from "./list-actions";
 
 export function useListsQuery(username?: string) {
   return useQuery({
@@ -23,16 +24,25 @@ export function useAddListItemMutation(listId: string) {
     mutationFn: (item: SearchResult) =>
       authedApiRequest(`/lists/${listId}/items`, {
         method: "POST",
-        body: {
-          type: item.type,
-          tmdbId: item.tmdbId,
-          title: item.title,
-          overview: item.overview,
-          posterPath: item.posterUrl,
-        },
+        body: buildListItemPayload(item),
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.list(listId) });
+    },
+  });
+}
+
+export function useCreateListMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (draft: ListDraft) =>
+      authedApiRequest<{ list?: CustomListSummary }>("/lists", {
+        method: "POST",
+        body: buildListCreatePayload(draft),
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["lists"] });
+      await queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
   });
 }

@@ -31,3 +31,24 @@ export function useFollowMutation(username: string, following: boolean) {
     },
   });
 }
+
+export function useSetProfilePinMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (pin: {
+      type: "LOG" | "LIST" | "SHOW" | "MOVIE";
+      rank?: number;
+      logId?: string;
+      listId?: string;
+      showId?: string;
+      movieId?: string;
+    }) =>
+      authedApiRequest("/profile/pins", {
+        method: "POST",
+        body: pin,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.profile });
+    },
+  });
+}
