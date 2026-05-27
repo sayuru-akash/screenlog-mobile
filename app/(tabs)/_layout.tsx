@@ -19,7 +19,7 @@ export default function TabsLayout() {
   }
 
   if (!session.data) {
-    return <Redirect href="/(auth)/sign-in" />;
+    return <Redirect href="/onboarding" />;
   }
 
   return (
