@@ -41,6 +41,7 @@ interface built with Expo and React Native.
 | Server state       | TanStack Query                | Cache, retries, invalidation, stale states               |
 | Local state        | Zustand                       | Small UI/session preference state only                   |
 | Secure storage     | Expo SecureStore              | Session cookie and auth cache                            |
+| Network state      | Expo Network, NetInfo         | Better Auth reachability and offline mutation blocking   |
 | Images             | Expo Image                    | Poster/backdrop/provider image caching                   |
 | Lists              | FlashList                     | Fast large lists for watchlists, comments, logs          |
 | Native controls    | Expo UI                       | Platform-native controls where available                 |
@@ -60,16 +61,17 @@ cd watchlog-mobile
 Install required runtime dependencies:
 
 ```sh
-npm install better-auth @better-auth/expo @tanstack/react-query zustand zod
-npx expo install expo-secure-store expo-image expo-notifications expo-haptics expo-blur
-npx expo install @expo/ui react-native-gesture-handler react-native-reanimated
-npx expo install @gorhom/bottom-sheet @shopify/flash-list react-native-mmkv
+npm install better-auth @better-auth/expo @tanstack/react-query zustand zod lucide-react-native
+npx expo install expo-secure-store expo-network expo-image expo-notifications expo-haptics expo-blur
+npx expo install @expo/ui react-native-gesture-handler react-native-reanimated react-native-worklets
+npx expo install @react-native-community/netinfo react-native-svg react-native-web
+npx expo install @gorhom/bottom-sheet @shopify/flash-list react-native-mmkv react-native-safe-area-context react-native-screens
 ```
 
 Install development tooling:
 
 ```sh
-npm install -D eslint prettier eslint-config-prettier
+npm install -D eslint prettier eslint-config-prettier vitest typescript react-test-renderer
 ```
 
 Initialize EAS:

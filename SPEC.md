@@ -33,13 +33,17 @@ Core libraries:
 - `expo-router` for file-based navigation.
 - `better-auth` and `@better-auth/expo` for auth.
 - `expo-secure-store` for auth cookie/session storage.
+- `expo-network` for Better Auth Expo network reachability.
 - `@tanstack/react-query` for API cache, loading, retries, and invalidation.
 - `zustand` only for small app UI/session preference state.
+- `@react-native-community/netinfo` for offline mutation blocking.
 - `expo-image` for posters, backdrops, people images, and provider logos.
 - `expo-notifications` for local/push notification plumbing.
 - `@expo/ui` for platform-native controls where it improves native feel.
 - `expo-haptics` for quiet success/destructive/action feedback.
 - `react-native-reanimated` and `react-native-gesture-handler` for native motion.
+- `react-native-worklets` for Reanimated runtime support.
+- `react-native-svg` for icon rendering.
 - `@gorhom/bottom-sheet` for native action sheets and compact editors.
 - `@shopify/flash-list` for long watchlists, search results, logs, and comments.
 - `zod` for API response validation at client boundaries.

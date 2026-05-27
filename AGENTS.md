@@ -100,6 +100,8 @@ eas submit --platform all
 - Use Zustand only for small local UI state that does not belong to the server.
 - Keep SecureStore only for auth/session data.
 - Keep MMKV only for non-sensitive local cache metadata and preferences.
+- Keep offline mutation blocking in the shared mutation/API layer; do not duplicate
+  one-off network checks in screens.
 - Use platform-native controls where available.
 - Use `@expo/ui` when it provides a better native control than a custom React
   Native recreation.

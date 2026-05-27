@@ -6,10 +6,6 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "splash": {
-      "backgroundColor": "#F7F7F4"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "tv.watchlog.mobile"

@@ -21,8 +21,8 @@
     "@better-auth/expo": "^1.6.11",
     "@expo/ui": "^56.0.14",
     "@gorhom/bottom-sheet": "^5.2.14",
-    "@react-native-community/netinfo": "^11.4.1",
-    "@shopify/flash-list": "^2.3.1",
+    "@react-native-community/netinfo": "12.0.1",
+    "@shopify/flash-list": "2.0.2",
     "@tanstack/react-query": "^5.90.12",
     "better-auth": "^1.6.11",
     "expo": "^56.0.5",
@@ -31,18 +31,23 @@
     "expo-haptics": "^56.0.3",
     "expo-image": "^56.0.9",
     "expo-linking": "^56.0.12",
+    "expo-network": "~56.0.4",
     "expo-notifications": "^56.0.14",
     "expo-router": "^56.2.7",
     "expo-secure-store": "^56.0.4",
     "expo-status-bar": "^56.0.4",
     "lucide-react-native": "^0.555.0",
-    "react": "^19.2.6",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
     "react-native": "^0.85.3",
     "react-native-gesture-handler": "^2.31.2",
     "react-native-mmkv": "^4.0.1",
     "react-native-reanimated": "^4.3.1",
-    "react-native-safe-area-context": "^5.8.0",
+    "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "^4.25.2",
+    "react-native-svg": "15.15.4",
+    "react-native-web": "^0.21.2",
+    "react-native-worklets": "0.8.3",
     "zod": "^4.4.2",
     "zustand": "^5.0.8"
   },
@@ -54,8 +59,14 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.0.1",
     "prettier": "^3.8.3",
+    "react-test-renderer": "19.2.3",
     "typescript": "^6.0.2",
     "typescript-eslint": "^8.59.4",
     "vitest": "^4.1.7"
+  },
+  "overrides": {
+    "xcode": {
+      "uuid": "^11.1.1"
+    }
   }
 }
