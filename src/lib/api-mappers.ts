@@ -17,6 +17,7 @@ import type {
   Visibility,
   WatchlistPayload,
 } from "@/types/domain";
+import { normalizedExternalUrl } from "@/lib/external-links";
 
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
 const HOME_ROUTE = "/(tabs)";
@@ -144,7 +145,7 @@ export function mapTitleExtrasPayload(payload: unknown) {
       return {
         id: stringValue(raw.id ?? raw.key ?? raw.url, "trailer"),
         title: stringValue(raw.title ?? raw.name, "Trailer"),
-        url: nullableString(raw.url),
+        url: trailerUrl(raw),
       };
     }),
     cast: asArray(extras.cast).map((item) => {
@@ -173,6 +174,14 @@ export function mapTitleExtrasPayload(payload: unknown) {
       )
       .filter(Boolean) as TitleSummary[],
   };
+}
+
+function trailerUrl(raw: AnyRecord) {
+  const key = nullableString(raw.key);
+  if (key && /^[a-zA-Z0-9_-]{6,32}$/.test(key)) {
+    return `https://www.youtube.com/watch?v=${key}`;
+  }
+  return normalizedExternalUrl(nullableString(raw.url));
 }
 
 export function mapListDetailPayload(payload: unknown): CustomListDetail {
@@ -625,12 +634,13 @@ function normalizeStats(input: unknown): NonNullable<ProfilePayload["stats"]> {
   const stats: NonNullable<ProfilePayload["stats"]> = {};
 
   for (const [key, value] of Object.entries(raw)) {
+    const label = profileStatLabel(key);
     if (
       value === null ||
       typeof value === "string" ||
       typeof value === "number"
     ) {
-      stats[key] = value;
+      stats[label] = profileStatValue(key, value);
       continue;
     }
 
@@ -642,11 +652,46 @@ function normalizeStats(input: unknown): NonNullable<ProfilePayload["stats"]> {
           return nullableString(asRecord(item).name);
         })
         .filter(Boolean);
-      if (labels.length) stats[key] = labels.join(", ");
+      if (labels.length) stats[label] = labels.join(", ");
     }
   }
 
   return stats;
+}
+
+const PROFILE_STAT_LABELS: Record<string, string> = {
+  showsTracked: "Shows tracked",
+  showsCompleted: "Shows completed",
+  episodesWatched: "Episodes watched",
+  moviesWatched: "Movies watched",
+  totalMovies: "Total movies",
+  totalWatchTimeMinutes: "Watch time",
+  topGenres: "Top genres",
+  followerCount: "Followers",
+  followingCount: "Following",
+  reviewCount: "Reviews",
+  listCount: "Lists",
+};
+
+function profileStatLabel(key: string) {
+  return (
+    PROFILE_STAT_LABELS[key] ??
+    key
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+      .replace(/[_-]+/g, " ")
+      .replace(/^./, (char) => char.toUpperCase())
+  );
+}
+
+function profileStatValue(key: string, value: string | number | null) {
+  if (key === "totalWatchTimeMinutes" && typeof value === "number") {
+    const hours = Math.floor(value / 60);
+    const minutes = value % 60;
+    if (hours && minutes) return `${hours}h ${minutes}m`;
+    if (hours) return `${hours}h`;
+    return `${minutes}m`;
+  }
+  return value;
 }
 
 function normalizeLog(item: unknown): ReviewSummary | null {

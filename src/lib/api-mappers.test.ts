@@ -8,6 +8,7 @@ import {
   mapProfilePayload,
   mapSettingsPayload,
   mapTitleDetailPayload,
+  mapTitleExtrasPayload,
   mapUpNextPayload,
   mapWatchlistPayload,
   mobileRouteFromHref,
@@ -288,6 +289,7 @@ describe("mapProfilePayload", () => {
         },
         stats: {
           showsTracked: 4,
+          totalWatchTimeMinutes: 125,
           topGenres: [
             { name: "Drama", count: 3 },
             { name: "Comedy", count: 2 },
@@ -314,8 +316,9 @@ describe("mapProfilePayload", () => {
         avatarUrl: "https://cdn.example/ada.jpg",
       },
       stats: {
-        showsTracked: 4,
-        topGenres: "Drama, Comedy",
+        "Shows tracked": 4,
+        "Watch time": "2h 5m",
+        "Top genres": "Drama, Comedy",
       },
       calendar: [{ date: "2026-05-27", total: 1 }],
       pinned: [
@@ -356,6 +359,32 @@ describe("mapSettingsPayload", () => {
         defaultListVisibility: "PRIVATE",
       },
     });
+  });
+});
+
+describe("mapTitleExtrasPayload", () => {
+  it("builds playable trailer URLs from YouTube keys and protocol-relative URLs", () => {
+    expect(
+      mapTitleExtrasPayload({
+        trailers: [
+          { id: "a", name: "Official trailer", key: "abc_123-XYZ" },
+          { id: "b", name: "Teaser", url: "//www.youtube.com/watch?v=def456" },
+          { id: "c", name: "Bad", url: "javascript:alert(1)" },
+        ],
+      }).trailers,
+    ).toEqual([
+      {
+        id: "a",
+        title: "Official trailer",
+        url: "https://www.youtube.com/watch?v=abc_123-XYZ",
+      },
+      {
+        id: "b",
+        title: "Teaser",
+        url: "https://www.youtube.com/watch?v=def456",
+      },
+      { id: "c", title: "Bad", url: null },
+    ]);
   });
 });
 

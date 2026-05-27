@@ -24,6 +24,7 @@ import {
 } from "@/features/content/actions";
 import { useTitleExtrasQuery, useTitleQuery } from "@/features/content/queries";
 import { useSetProfilePinMutation } from "@/features/profile/queries";
+import { openExternalUrl } from "@/lib/external-links";
 import { useTheme } from "@/lib/theme";
 import type { MediaType } from "@/types/domain";
 
@@ -79,13 +80,13 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
   };
   const openTrailer = async (url?: string | null) => {
     if (!url) return;
-    const supported = await Linking.canOpenURL(url);
-    if (supported) await Linking.openURL(url);
-    else
+    const opened = await openExternalUrl(url, Linking).catch(() => false);
+    if (!opened) {
       Alert.alert(
         "Trailer unavailable",
         "This trailer cannot be opened on this device.",
       );
+    }
   };
 
   return (
