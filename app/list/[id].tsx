@@ -26,6 +26,7 @@ import {
 } from "@/features/lists/queries";
 import { useSearchQuery } from "@/features/search/queries";
 import { useSetProfilePinMutation } from "@/features/profile/queries";
+import { pinConfirmationCopy } from "@/features/content/action-confirmations";
 import { useTheme } from "@/lib/theme";
 import type { Visibility } from "@/types/domain";
 
@@ -81,6 +82,19 @@ export default function ListDetailScreen() {
       },
     ]);
   };
+  const confirmPinList = () => {
+    const copy = pinConfirmationCopy({
+      title: list.data?.title ?? "This list",
+      type: "list",
+    });
+    Alert.alert(copy.title, copy.message, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: copy.confirmLabel,
+        onPress: () => setPin.mutate({ type: "LIST", listId: id, rank: 0 }),
+      },
+    ]);
+  };
   return (
     <Screen
       back
@@ -88,10 +102,7 @@ export default function ListDetailScreen() {
       subtitle={list.data?.description || undefined}
       right={
         <View style={{ flexDirection: "row", gap: theme.spacing.sm }}>
-          <IconButton
-            label="Pin list"
-            onPress={() => setPin.mutate({ type: "LIST", listId: id, rank: 0 })}
-          >
+          <IconButton label="Pin list" onPress={confirmPinList}>
             <Pin size={18} color={theme.colors.text} />
           </IconButton>
           {canEdit ? (

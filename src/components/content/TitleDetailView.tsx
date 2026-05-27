@@ -68,6 +68,15 @@ import {
   StarRatingDisplay,
   StarRatingInput,
 } from "@/components/reviews/StarRating";
+import {
+  type ActionConfirmation,
+  dropShowConfirmationCopy,
+  markCaughtUpConfirmationCopy,
+  markSeasonConfirmationCopy,
+  movieLogConfirmationCopy,
+  pinConfirmationCopy,
+  removeWatchlistConfirmationCopy,
+} from "@/features/content/action-confirmations";
 
 export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
   const theme = useTheme();
@@ -127,19 +136,13 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
 
   const confirmRemove = () => {
     if (!data) return;
-    Alert.alert(
-      `Remove ${type === "show" ? "show" : "movie"}?`,
-      type === "show"
-        ? `${data.title} and episode progress will be removed from your watchlist. Reviews stay on your profile.`
-        : `${data.title} will be removed from your watchlist. Reviews stay on your profile.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: () => remove.mutate({ type, id }),
-        },
-      ],
+    confirmAction(
+      removeWatchlistConfirmationCopy({
+        title: data.title,
+        type,
+        watched: type === "movie" && Boolean(data.isWatched),
+      }),
+      () => remove.mutate({ type, id }),
     );
   };
 
@@ -189,6 +192,56 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
       visibility,
       tags: "",
     });
+  };
+
+  const confirmMovieLog = (isRewatch = false) => {
+    if (!data) return;
+    confirmAction(
+      movieLogConfirmationCopy({ title: data.title, rewatch: isRewatch }),
+      () => markMovieWatched(isRewatch),
+    );
+  };
+
+  const confirmPin = () => {
+    if (!data || isPinnedNow) return;
+    confirmAction(pinConfirmationCopy({ title: data.title, type }), () =>
+      setPin.mutate(
+        {
+          type: type === "show" ? "SHOW" : "MOVIE",
+          showId: type === "show" ? id : undefined,
+          movieId: type === "movie" ? id : undefined,
+          rank: 0,
+        },
+        { onSuccess: () => setPinnedKey(currentPinKey) },
+      ),
+    );
+  };
+
+  const confirmDropShow = () => {
+    if (!data) return;
+    confirmAction(dropShowConfirmationCopy(data.title), () =>
+      watchlistUpdate.mutate({
+        ...titleToWatchlistInput(data),
+        userStatus: "DROPPED",
+      }),
+    );
+  };
+
+  const confirmMarkSeason = () => {
+    if (!selectedSeason) return;
+    confirmAction(markSeasonConfirmationCopy(selectedSeason.name), () =>
+      progress.mutate({
+        action: "markSeason",
+        seasonId: selectedSeason.id,
+      }),
+    );
+  };
+
+  const confirmMarkCaughtUp = () => {
+    if (!data) return;
+    confirmAction(markCaughtUpConfirmationCopy(data.title), () =>
+      progress.mutate({ action: "markCaughtUp", showId: id }),
+    );
   };
 
   return (
@@ -304,14 +357,40 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                     flexWrap: "wrap",
                   }}
                 >
+                  {type === "movie" ? (
+                    <IconButton
+                      label={
+                        data.isWatched
+                          ? "Remove watched status"
+                          : data.status
+                            ? "Remove from watchlist"
+                            : "Add to watchlist"
+                      }
+                      onPress={
+                        data.status || data.isWatched
+                          ? confirmRemove
+                          : addToWatchlist
+                      }
+                    >
+                      {data.status || data.isWatched ? (
+                        <Check size={18} color={theme.colors.accent} />
+                      ) : (
+                        <Plus size={18} color={theme.colors.text} />
+                      )}
+                    </IconButton>
+                  ) : null}
                   <View style={{ flexGrow: 1, flexBasis: 160 }}>
                     <Button
-                      loading={progress.isPending || watchlistUpdate.isPending}
+                      loading={
+                        progress.isPending ||
+                        watchlistUpdate.isPending ||
+                        review.isPending
+                      }
                       disabled={
                         type === "show" && Boolean(data.status) && !nextEpisode
                       }
                       icon={
-                        !data.status ? (
+                        !data.status && type === "show" ? (
                           <Plus size={16} color="#FFFFFF" />
                         ) : type === "movie" && data.isWatched ? (
                           <RotateCcw size={16} color="#FFFFFF" />
@@ -320,7 +399,7 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                         )
                       }
                       onPress={() => {
-                        if (!data.status) {
+                        if (!data.status && type === "show") {
                           addToWatchlist();
                           return;
                         }
@@ -330,12 +409,14 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                             episodeId: nextEpisode.id,
                           });
                         } else if (type === "movie") {
-                          markMovieWatched(Boolean(data.isWatched));
+                          confirmMovieLog(Boolean(data.isWatched));
                         }
                       }}
                     >
                       {!data.status
-                        ? "Add to watchlist"
+                        ? type === "movie"
+                          ? "Mark Watched"
+                          : "Add to watchlist"
                         : type === "show"
                           ? nextEpisode?.episodeLabel
                             ? `Watch ${nextEpisode.episodeLabel}`
@@ -407,17 +488,8 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                     )
                   }
                   loading={setPin.isPending}
-                  onPress={() =>
-                    setPin.mutate(
-                      {
-                        type: type === "show" ? "SHOW" : "MOVIE",
-                        showId: type === "show" ? id : undefined,
-                        movieId: type === "movie" ? id : undefined,
-                        rank: 0,
-                      },
-                      { onSuccess: () => setPinnedKey(currentPinKey) },
-                    )
-                  }
+                  disabled={isPinnedNow}
+                  onPress={confirmPin}
                 >
                   {isPinnedNow ? "Pinned" : "Pin"}
                 </Button>
@@ -480,15 +552,7 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                     </Button>
                   ) : null}
                   {data.status !== "DROPPED" ? (
-                    <Button
-                      variant="danger"
-                      onPress={() =>
-                        watchlistUpdate.mutate({
-                          ...titleToWatchlistInput(data),
-                          userStatus: "DROPPED",
-                        })
-                      }
-                    >
+                    <Button variant="danger" onPress={confirmDropShow}>
                       Drop
                     </Button>
                   ) : null}
@@ -544,12 +608,7 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                         <Button
                           variant="ghost"
                           loading={progress.isPending}
-                          onPress={() =>
-                            progress.mutate({
-                              action: "markSeason",
-                              seasonId: selectedSeason.id,
-                            })
-                          }
+                          onPress={confirmMarkSeason}
                         >
                           Mark Season
                         </Button>
@@ -658,9 +717,7 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                     <Button
                       variant="secondary"
                       loading={progress.isPending}
-                      onPress={() =>
-                        progress.mutate({ action: "markCaughtUp", showId: id })
-                      }
+                      onPress={confirmMarkCaughtUp}
                     >
                       Caught Up
                     </Button>
@@ -1091,6 +1148,17 @@ function ProviderList({
       ) : null}
     </View>
   );
+}
+
+function confirmAction(copy: ActionConfirmation, onConfirm: () => void) {
+  Alert.alert(copy.title, copy.message, [
+    { text: "Cancel", style: "cancel" },
+    {
+      text: copy.confirmLabel,
+      style: copy.destructive ? "destructive" : "default",
+      onPress: onConfirm,
+    },
+  ]);
 }
 
 function formatDate(value: string) {
