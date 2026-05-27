@@ -4,9 +4,12 @@ import {
   Check,
   Heart,
   ListPlus,
+  MessageCircle,
   Pin,
   Play,
+  Plus,
   RotateCcw,
+  Trash2,
   X,
 } from "lucide-react-native";
 import { useMemo, useState } from "react";
@@ -53,8 +56,18 @@ import type {
   CustomListSummary,
   MediaType,
   ProviderSummary,
+  ReviewSummary,
   SearchResult,
+  Visibility,
 } from "@/types/domain";
+import {
+  formatStarsFromBackend,
+  starsToBackendRating,
+} from "@/features/reviews/rating";
+import {
+  StarRatingDisplay,
+  StarRatingInput,
+} from "@/components/reviews/StarRating";
 
 export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
   const theme = useTheme();
@@ -70,15 +83,14 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [listPickerOpen, setListPickerOpen] = useState(false);
   const [reviewText, setReviewText] = useState("");
-  const [rating, setRating] = useState("");
+  const [ratingStars, setRatingStars] = useState<number | null>(null);
   const [spoiler, setSpoiler] = useState(false);
-  const [rewatch, setRewatch] = useState(false);
-  const [tags, setTags] = useState("");
-  const [visibility, setVisibility] = useState<
-    "PRIVATE" | "FOLLOWERS" | "PUBLIC"
-  >("PRIVATE");
+  const [visibility, setVisibility] = useState<Visibility>("PRIVATE");
   const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
   const [pinnedKey, setPinnedKey] = useState<string | null>(null);
+  const [revealedReviews, setRevealedReviews] = useState<Set<string>>(
+    () => new Set(),
+  );
   const data = title.data;
   const currentPinKey = `${type}:${id}`;
   const profileHasPin = Boolean(
@@ -116,8 +128,10 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
   const confirmRemove = () => {
     if (!data) return;
     Alert.alert(
-      "Remove from watchlist?",
-      `${data.title} and related progress will be removed.`,
+      `Remove ${type === "show" ? "show" : "movie"}?`,
+      type === "show"
+        ? `${data.title} and episode progress will be removed from your watchlist. Reviews stay on your profile.`
+        : `${data.title} will be removed from your watchlist. Reviews stay on your profile.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -156,6 +170,27 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
     }
   };
 
+  const addToWatchlist = () => {
+    if (!data) return;
+    watchlistUpdate.mutate({
+      ...titleToWatchlistInput(data),
+      userStatus: type === "show" ? "WATCHING" : "PLAN_TO_WATCH",
+    });
+  };
+
+  const markMovieWatched = (isRewatch = false) => {
+    review.mutate({
+      type: "movie",
+      movieId: id,
+      rating: "",
+      review: "",
+      spoiler: false,
+      rewatch: isRewatch,
+      visibility,
+      tags: "",
+    });
+  };
+
   return (
     <Screen
       back
@@ -188,6 +223,36 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                   contentFit="cover"
                 />
               ) : null}
+              <View
+                style={{
+                  position: "absolute",
+                  top: theme.spacing.md,
+                  right: theme.spacing.md,
+                  zIndex: 2,
+                }}
+              >
+                <IconButton
+                  label={
+                    data.isFavourite ? "Remove favourite" : "Add favourite"
+                  }
+                  onPress={() =>
+                    watchlistUpdate.mutate({
+                      ...titleToWatchlistInput(data),
+                      isFavourite: !data.isFavourite,
+                    })
+                  }
+                >
+                  <Heart
+                    size={19}
+                    color={
+                      data.isFavourite ? theme.colors.accent : theme.colors.text
+                    }
+                    fill={
+                      data.isFavourite ? theme.colors.accent : "transparent"
+                    }
+                  />
+                </IconButton>
+              </View>
               <View
                 style={{
                   flex: 1,
@@ -236,39 +301,48 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                     flexDirection: "row",
                     gap: theme.spacing.sm,
                     alignItems: "center",
+                    flexWrap: "wrap",
                   }}
                 >
-                  <View style={{ flex: 1 }}>
+                  <View style={{ flexGrow: 1, flexBasis: 160 }}>
                     <Button
                       loading={progress.isPending || watchlistUpdate.isPending}
-                      disabled={type === "show" && !nextEpisode?.id}
+                      disabled={
+                        type === "show" && Boolean(data.status) && !nextEpisode
+                      }
+                      icon={
+                        !data.status ? (
+                          <Plus size={16} color="#FFFFFF" />
+                        ) : type === "movie" && data.isWatched ? (
+                          <RotateCcw size={16} color="#FFFFFF" />
+                        ) : (
+                          <Check size={16} color="#FFFFFF" />
+                        )
+                      }
                       onPress={() => {
+                        if (!data.status) {
+                          addToWatchlist();
+                          return;
+                        }
                         if (type === "show" && nextEpisode?.id) {
                           progress.mutate({
                             action: "watch",
                             episodeId: nextEpisode.id,
                           });
                         } else if (type === "movie") {
-                          review.mutate({
-                            type: "movie",
-                            movieId: id,
-                            rating: "",
-                            review: "",
-                            spoiler: false,
-                            rewatch: false,
-                            visibility,
-                            tags: "",
-                          });
+                          markMovieWatched(Boolean(data.isWatched));
                         }
                       }}
                     >
-                      {type === "show"
-                        ? nextEpisode?.episodeLabel
-                          ? `Watch ${nextEpisode.episodeLabel}`
-                          : "Mark Next"
-                        : data.isWatched
-                          ? "Log Rewatch"
-                          : "Mark Watched"}
+                      {!data.status
+                        ? "Add to watchlist"
+                        : type === "show"
+                          ? nextEpisode?.episodeLabel
+                            ? `Watch ${nextEpisode.episodeLabel}`
+                            : "Caught up"
+                          : data.isWatched
+                            ? "Rewatch"
+                            : "Mark Watched"}
                     </Button>
                   </View>
                   <Button
@@ -277,29 +351,6 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                   >
                     Review
                   </Button>
-                  <IconButton
-                    label={
-                      data.isFavourite ? "Remove favourite" : "Add favourite"
-                    }
-                    onPress={() =>
-                      watchlistUpdate.mutate({
-                        ...titleToWatchlistInput(data),
-                        isFavourite: !data.isFavourite,
-                      })
-                    }
-                  >
-                    <Heart
-                      size={18}
-                      color={
-                        data.isFavourite
-                          ? theme.colors.accent
-                          : theme.colors.text
-                      }
-                      fill={
-                        data.isFavourite ? theme.colors.accent : "transparent"
-                      }
-                    />
-                  </IconButton>
                 </View>
               </View>
             </View>
@@ -330,7 +381,7 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
               />
             )}
           </Section>
-          <Section title="Actions">
+          <Section title={type === "show" ? "Manage show" : "More options"}>
             <View style={{ gap: theme.spacing.sm }}>
               <View
                 style={{
@@ -370,29 +421,18 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                 >
                   {isPinnedNow ? "Pinned" : "Pin"}
                 </Button>
-                {type === "movie" && data.isWatched ? (
+                {type === "movie" && data.status ? (
                   <Button
-                    variant="ghost"
-                    icon={<RotateCcw size={15} color={theme.colors.text} />}
-                    loading={review.isPending}
-                    onPress={() =>
-                      review.mutate({
-                        type: "movie",
-                        movieId: id,
-                        rating: "",
-                        review: "",
-                        spoiler: false,
-                        rewatch: true,
-                        visibility,
-                        tags: "",
-                      })
-                    }
+                    variant="danger"
+                    icon={<Trash2 size={15} color={theme.colors.danger} />}
+                    loading={remove.isPending}
+                    onPress={confirmRemove}
                   >
-                    Rewatch
+                    Remove
                   </Button>
                 ) : null}
               </View>
-              {data.status ? (
+              {type === "show" && data.status ? (
                 <View
                   style={{
                     flexDirection: "row",
@@ -400,9 +440,9 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                     gap: theme.spacing.sm,
                   }}
                 >
-                  {data.status !== "WATCHING" ? (
+                  {data.status === "PAUSED" || data.status === "DROPPED" ? (
                     <Button
-                      variant="ghost"
+                      variant="secondary"
                       onPress={() =>
                         watchlistUpdate.mutate({
                           ...titleToWatchlistInput(data),
@@ -413,7 +453,20 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                       Resume
                     </Button>
                   ) : null}
-                  {data.status !== "PAUSED" ? (
+                  {data.status === "PLAN_TO_WATCH" ? (
+                    <Button
+                      variant="secondary"
+                      onPress={() =>
+                        watchlistUpdate.mutate({
+                          ...titleToWatchlistInput(data),
+                          userStatus: "WATCHING",
+                        })
+                      }
+                    >
+                      Start watching
+                    </Button>
+                  ) : null}
+                  {data.status === "WATCHING" || data.status === "CAUGHT_UP" ? (
                     <Button
                       variant="ghost"
                       onPress={() =>
@@ -428,7 +481,7 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                   ) : null}
                   {data.status !== "DROPPED" ? (
                     <Button
-                      variant="ghost"
+                      variant="danger"
                       onPress={() =>
                         watchlistUpdate.mutate({
                           ...titleToWatchlistInput(data),
@@ -439,7 +492,11 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                       Drop
                     </Button>
                   ) : null}
-                  <Button variant="danger" onPress={confirmRemove}>
+                  <Button
+                    variant="danger"
+                    icon={<Trash2 size={15} color={theme.colors.danger} />}
+                    onPress={confirmRemove}
+                  >
                     Remove
                   </Button>
                 </View>
@@ -567,7 +624,7 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                                 });
                               }}
                             >
-                              {episode.watched ? "Undo" : "Watch"}
+                              {episode.watched ? "Undo" : "Mark"}
                             </Button>
                             {episode.watched ? (
                               <IconButton
@@ -747,26 +804,25 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
             {data.reviews?.length ? (
               <View style={{ gap: theme.spacing.md }}>
                 {data.reviews.slice(0, 3).map((item, index) => (
-                  <View
+                  <ReviewCard
                     key={`${item.id}-${item.createdAt ?? item.watchedAt ?? index}`}
-                    style={{ gap: theme.spacing.xs }}
-                  >
-                    <AppText>
-                      {item.spoiler
-                        ? "Spoiler review"
-                        : item.body || item.title}
-                    </AppText>
-                    <Button
-                      variant="ghost"
-                      onPress={() => router.push(`/log/${item.id}`)}
-                    >
-                      Open
-                    </Button>
-                  </View>
+                    review={item}
+                    revealed={revealedReviews.has(item.id)}
+                    onReveal={() =>
+                      setRevealedReviews((current) => {
+                        const next = new Set(current);
+                        next.add(item.id);
+                        return next;
+                      })
+                    }
+                  />
                 ))}
               </View>
             ) : (
-              <EmptyState title="No reviews yet" />
+              <EmptyState
+                title="No reviews yet"
+                body="Be the first to leave a rating or note."
+              />
             )}
           </Section>
           <Modal
@@ -787,15 +843,7 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                 </IconButton>
               }
             >
-              <TextInput
-                accessibilityLabel="Rating"
-                placeholder="Rating 1-10"
-                value={rating}
-                onChangeText={setRating}
-                keyboardType="number-pad"
-                placeholderTextColor={theme.colors.faint}
-                style={inputStyle(theme)}
-              />
+              <StarRatingInput value={ratingStars} onChange={setRatingStars} />
               <TextInput
                 accessibilityLabel="Review"
                 placeholder="Write a review"
@@ -808,23 +856,10 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                   { minHeight: 140, textAlignVertical: "top" },
                 ]}
               />
-              <TextInput
-                accessibilityLabel="Tags"
-                placeholder="Tags, comma separated"
-                value={tags}
-                onChangeText={setTags}
-                placeholderTextColor={theme.colors.faint}
-                style={inputStyle(theme)}
-              />
               <ToggleRow
                 label="Spoiler"
                 value={spoiler}
                 onValueChange={setSpoiler}
-              />
-              <ToggleRow
-                label="Rewatch"
-                value={rewatch}
-                onValueChange={setRewatch}
               />
               <View style={{ flexDirection: "row", gap: theme.spacing.sm }}>
                 {(["PRIVATE", "FOLLOWERS", "PUBLIC"] as const).map((option) => (
@@ -848,27 +883,28 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
               ) : null}
               <Button
                 loading={review.isPending}
-                disabled={!rating.trim() && !reviewText.trim() && !rewatch}
+                disabled={!ratingStars && !reviewText.trim()}
                 onPress={() =>
                   review.mutate(
                     {
                       type,
                       showId: type === "show" ? id : undefined,
                       movieId: type === "movie" ? id : undefined,
-                      rating,
+                      rating: ratingStars
+                        ? String(starsToBackendRating(ratingStars))
+                        : "",
                       review: reviewText,
                       spoiler,
-                      rewatch,
+                      rewatch: false,
                       visibility,
-                      tags,
+                      tags: "",
                     },
                     {
                       onSuccess: () => {
                         setReviewOpen(false);
                         setReviewText("");
-                        setRating("");
-                        setTags("");
-                        setRewatch(false);
+                        setRatingStars(null);
+                        setSpoiler(false);
                       },
                     },
                   )
@@ -929,6 +965,93 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
         </>
       ) : null}
     </Screen>
+  );
+}
+
+function ReviewCard({
+  review,
+  revealed,
+  onReveal,
+}: {
+  review: ReviewSummary;
+  revealed: boolean;
+  onReveal: () => void;
+}) {
+  const theme = useTheme();
+  const ratingLabel = formatStarsFromBackend(review.rating);
+  const hidden = Boolean(review.spoiler && !revealed);
+  return (
+    <View
+      style={{
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        borderRadius: theme.radius.md,
+        backgroundColor: theme.colors.surface,
+        padding: theme.spacing.md,
+        gap: theme.spacing.sm,
+      }}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: theme.spacing.md,
+        }}
+      >
+        <View style={{ flex: 1 }}>
+          <AppText variant="label" numberOfLines={1}>
+            {review.user?.username
+              ? `@${review.user.username}`
+              : review.user?.name || "Watchlog"}
+          </AppText>
+          <AppText variant="caption" muted numberOfLines={1}>
+            {review.watchedAt ? formatDate(review.watchedAt) : "Review"}
+            {review.rewatch ? " · rewatch" : ""}
+          </AppText>
+        </View>
+        {ratingLabel ? <StarRatingDisplay rating={review.rating} /> : null}
+      </View>
+      {hidden ? (
+        <View style={{ gap: theme.spacing.sm }}>
+          <AppText muted>Spoiler review.</AppText>
+          <Button variant="ghost" onPress={onReveal}>
+            Reveal
+          </Button>
+        </View>
+      ) : (
+        <AppText muted={!review.body} numberOfLines={5}>
+          {review.body || "Rated without a written review."}
+        </AppText>
+      )}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: theme.spacing.sm,
+        }}
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: theme.spacing.xs,
+          }}
+        >
+          <MessageCircle size={15} color={theme.colors.muted} />
+          <AppText variant="caption" muted>
+            {review.commentCount ?? 0}
+          </AppText>
+        </View>
+        <Button
+          variant="ghost"
+          onPress={() => router.push(`/log/${review.id}`)}
+        >
+          Open discussion
+        </Button>
+      </View>
+    </View>
   );
 }
 

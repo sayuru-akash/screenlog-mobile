@@ -5,6 +5,7 @@ import { Alert, Modal, Switch, TextInput, View } from "react-native";
 import { X } from "lucide-react-native";
 import { Button } from "@/components/primitives/Button";
 import { Screen } from "@/components/primitives/Screen";
+import { Section } from "@/components/primitives/Section";
 import {
   EmptyState,
   ErrorState,
@@ -22,6 +23,15 @@ import {
   useUpdateLogMutation,
 } from "@/features/reviews/queries";
 import { useTheme } from "@/lib/theme";
+import {
+  StarRatingDisplay,
+  StarRatingInput,
+} from "@/components/reviews/StarRating";
+import {
+  backendRatingToStars,
+  formatStarsFromBackend,
+  starsToBackendRating,
+} from "@/features/reviews/rating";
 
 export default function LogDetailScreen() {
   const theme = useTheme();
@@ -36,7 +46,7 @@ export default function LogDetailScreen() {
   const [revealed, setRevealed] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editBody, setEditBody] = useState("");
-  const [editRating, setEditRating] = useState("");
+  const [editRatingStars, setEditRatingStars] = useState<number | null>(null);
   const [editSpoiler, setEditSpoiler] = useState(false);
   const [commentBody, setCommentBody] = useState("");
   const [commentSpoiler, setCommentSpoiler] = useState(false);
@@ -52,7 +62,7 @@ export default function LogDetailScreen() {
     <Screen
       back
       title={log.data?.title || "Review"}
-      subtitle={log.data?.rating ? `${log.data.rating}/10` : undefined}
+      subtitle={formatStarsFromBackend(log.data?.rating) ?? undefined}
     >
       {log.isLoading ? <LoadingState label="Loading review" /> : null}
       {log.isError ? (
@@ -98,8 +108,10 @@ export default function LogDetailScreen() {
                   ? ` · ${formatDate(log.data.watchedAt)}`
                   : ""}
                 {log.data.rewatch ? " · rewatch" : ""}
-                {log.data.rating ? ` · ${log.data.rating}/10` : ""}
               </AppText>
+              {log.data.rating ? (
+                <StarRatingDisplay rating={log.data.rating} />
+              ) : null}
               <AppText>
                 {hiddenSpoiler
                   ? "Spoiler review."
@@ -139,9 +151,7 @@ export default function LogDetailScreen() {
                 variant="ghost"
                 onPress={() => {
                   setEditBody(log.data?.body ?? "");
-                  setEditRating(
-                    log.data?.rating ? String(log.data.rating) : "",
-                  );
+                  setEditRatingStars(backendRatingToStars(log.data?.rating));
                   setEditSpoiler(Boolean(log.data?.spoiler));
                   setEditOpen(true);
                 }}
@@ -152,204 +162,219 @@ export default function LogDetailScreen() {
           </View>
         </>
       ) : null}
-      {comments.isLoading ? <LoadingState label="Loading comments" /> : null}
-      {comments.data?.comments?.length ? (
-        comments.data.comments.map((comment, commentIndex) => (
-          <View
-            key={`${comment.id}-${comment.createdAt ?? commentIndex}`}
-            style={{
-              borderWidth: 1,
-              borderColor: theme.colors.border,
-              borderRadius: theme.radius.sm,
-              backgroundColor: theme.colors.surface,
-              padding: theme.spacing.md,
-              gap: theme.spacing.xs,
-            }}
-          >
-            <CommentBody
-              comment={comment}
-              revealed={revealedComments.has(comment.id)}
-              onReveal={() =>
-                setRevealedComments((current) => {
-                  const next = new Set(current);
-                  next.add(comment.id);
-                  return next;
-                })
-              }
+      <Section title="Comments">
+        <View style={{ gap: theme.spacing.md }}>
+          {comments.isLoading ? (
+            <LoadingState label="Loading comments" />
+          ) : null}
+          {comments.data?.comments?.length ? (
+            comments.data.comments.map((comment, commentIndex) => (
+              <View
+                key={`${comment.id}-${comment.createdAt ?? commentIndex}`}
+                style={{
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  borderRadius: theme.radius.sm,
+                  backgroundColor: theme.colors.surface,
+                  padding: theme.spacing.md,
+                  gap: theme.spacing.xs,
+                }}
+              >
+                <CommentBody
+                  comment={comment}
+                  revealed={revealedComments.has(comment.id)}
+                  onReveal={() =>
+                    setRevealedComments((current) => {
+                      const next = new Set(current);
+                      next.add(comment.id);
+                      return next;
+                    })
+                  }
+                />
+                <View
+                  style={{
+                    flexDirection: "row",
+                    gap: theme.spacing.sm,
+                    alignItems: "center",
+                  }}
+                >
+                  <Button
+                    variant="ghost"
+                    loading={commentReaction.isPending}
+                    onPress={() =>
+                      commentReaction.mutate({
+                        id: comment.id,
+                        value: comment.userReaction === 1 ? 0 : 1,
+                      })
+                    }
+                  >
+                    Up {comment.reactionScore ?? 0}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    loading={commentReaction.isPending}
+                    onPress={() =>
+                      commentReaction.mutate({
+                        id: comment.id,
+                        value: comment.userReaction === -1 ? 0 : -1,
+                      })
+                    }
+                  >
+                    Down
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onPress={() =>
+                      setReplyParent({
+                        id: comment.id,
+                        label: comment.title || "comment",
+                      })
+                    }
+                  >
+                    Reply
+                  </Button>
+                </View>
+                {comment.replies?.length ? (
+                  <View
+                    style={{
+                      gap: theme.spacing.sm,
+                      paddingLeft: theme.spacing.lg,
+                    }}
+                  >
+                    {comment.replies.map((reply, replyIndex) => (
+                      <View
+                        key={`${reply.id}-${reply.createdAt ?? replyIndex}`}
+                        style={{ gap: theme.spacing.xs }}
+                      >
+                        <CommentBody
+                          comment={reply}
+                          revealed={revealedComments.has(reply.id)}
+                          onReveal={() =>
+                            setRevealedComments((current) => {
+                              const next = new Set(current);
+                              next.add(reply.id);
+                              return next;
+                            })
+                          }
+                          muted
+                        />
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            gap: theme.spacing.sm,
+                          }}
+                        >
+                          <Button
+                            variant="ghost"
+                            loading={commentReaction.isPending}
+                            onPress={() =>
+                              commentReaction.mutate({
+                                id: reply.id,
+                                value: reply.userReaction === 1 ? 0 : 1,
+                              })
+                            }
+                          >
+                            Up {reply.reactionScore ?? 0}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            loading={commentReaction.isPending}
+                            onPress={() =>
+                              commentReaction.mutate({
+                                id: reply.id,
+                                value: reply.userReaction === -1 ? 0 : -1,
+                              })
+                            }
+                          >
+                            Down
+                          </Button>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+            ))
+          ) : comments.isLoading ? null : (
+            <EmptyState title="No comments" />
+          )}
+          <View style={{ gap: theme.spacing.md }}>
+            {replyParent ? (
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <AppText muted>Replying to {replyParent.label}</AppText>
+                <Button variant="ghost" onPress={() => setReplyParent(null)}>
+                  Clear
+                </Button>
+              </View>
+            ) : null}
+            <TextInput
+              accessibilityLabel="Comment"
+              placeholder="Write a comment"
+              value={commentBody}
+              onChangeText={setCommentBody}
+              multiline
+              placeholderTextColor={theme.colors.faint}
+              style={{
+                minHeight: 96,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+                borderRadius: theme.radius.sm,
+                padding: theme.spacing.md,
+                color: theme.colors.text,
+                backgroundColor: theme.colors.surface,
+                fontSize: 16,
+                textAlignVertical: "top",
+              }}
             />
             <View
               style={{
                 flexDirection: "row",
-                gap: theme.spacing.sm,
+                justifyContent: "space-between",
                 alignItems: "center",
               }}
             >
-              <Button
-                variant="ghost"
-                loading={commentReaction.isPending}
-                onPress={() =>
-                  commentReaction.mutate({
-                    id: comment.id,
-                    value: comment.userReaction === 1 ? 0 : 1,
-                  })
-                }
-              >
-                Up {comment.reactionScore ?? 0}
-              </Button>
-              <Button
-                variant="ghost"
-                loading={commentReaction.isPending}
-                onPress={() =>
-                  commentReaction.mutate({
-                    id: comment.id,
-                    value: comment.userReaction === -1 ? 0 : -1,
-                  })
-                }
-              >
-                Down
-              </Button>
-              <Button
-                variant="ghost"
-                onPress={() =>
-                  setReplyParent({
-                    id: comment.id,
-                    label: comment.title || "comment",
-                  })
-                }
-              >
-                Reply
-              </Button>
+              <AppText>Spoiler</AppText>
+              <Switch
+                value={commentSpoiler}
+                onValueChange={setCommentSpoiler}
+              />
             </View>
-            {comment.replies?.length ? (
-              <View
-                style={{ gap: theme.spacing.sm, paddingLeft: theme.spacing.lg }}
-              >
-                {comment.replies.map((reply, replyIndex) => (
-                  <View
-                    key={`${reply.id}-${reply.createdAt ?? replyIndex}`}
-                    style={{ gap: theme.spacing.xs }}
-                  >
-                    <CommentBody
-                      comment={reply}
-                      revealed={revealedComments.has(reply.id)}
-                      onReveal={() =>
-                        setRevealedComments((current) => {
-                          const next = new Set(current);
-                          next.add(reply.id);
-                          return next;
-                        })
-                      }
-                      muted
-                    />
-                    <View
-                      style={{ flexDirection: "row", gap: theme.spacing.sm }}
-                    >
-                      <Button
-                        variant="ghost"
-                        loading={commentReaction.isPending}
-                        onPress={() =>
-                          commentReaction.mutate({
-                            id: reply.id,
-                            value: reply.userReaction === 1 ? 0 : 1,
-                          })
-                        }
-                      >
-                        Up {reply.reactionScore ?? 0}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        loading={commentReaction.isPending}
-                        onPress={() =>
-                          commentReaction.mutate({
-                            id: reply.id,
-                            value: reply.userReaction === -1 ? 0 : -1,
-                          })
-                        }
-                      >
-                        Down
-                      </Button>
-                    </View>
-                  </View>
-                ))}
-              </View>
+            {createComment.isError || commentReaction.isError ? (
+              <AppText style={{ color: theme.colors.danger }}>
+                {createComment.error?.message || commentReaction.error?.message}
+              </AppText>
             ) : null}
-          </View>
-        ))
-      ) : (
-        <EmptyState title="No comments" />
-      )}
-      <View style={{ gap: theme.spacing.md }}>
-        {replyParent ? (
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <AppText muted>Replying to {replyParent.label}</AppText>
-            <Button variant="ghost" onPress={() => setReplyParent(null)}>
-              Clear
+            <Button
+              loading={createComment.isPending}
+              disabled={!commentBody.trim()}
+              onPress={() =>
+                createComment.mutate(
+                  {
+                    body: commentBody,
+                    spoiler: commentSpoiler,
+                    parentId: replyParent?.id,
+                  },
+                  {
+                    onSuccess: () => {
+                      setCommentBody("");
+                      setCommentSpoiler(false);
+                      setReplyParent(null);
+                    },
+                  },
+                )
+              }
+            >
+              {replyParent ? "Reply" : "Comment"}
             </Button>
           </View>
-        ) : null}
-        <TextInput
-          accessibilityLabel="Comment"
-          placeholder="Write a comment"
-          value={commentBody}
-          onChangeText={setCommentBody}
-          multiline
-          placeholderTextColor={theme.colors.faint}
-          style={{
-            minHeight: 96,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            borderRadius: theme.radius.sm,
-            padding: theme.spacing.md,
-            color: theme.colors.text,
-            backgroundColor: theme.colors.surface,
-            fontSize: 16,
-            textAlignVertical: "top",
-          }}
-        />
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <AppText>Spoiler</AppText>
-          <Switch value={commentSpoiler} onValueChange={setCommentSpoiler} />
         </View>
-        {createComment.isError || commentReaction.isError ? (
-          <AppText style={{ color: theme.colors.danger }}>
-            {createComment.error?.message || commentReaction.error?.message}
-          </AppText>
-        ) : null}
-        <Button
-          loading={createComment.isPending}
-          disabled={!commentBody.trim()}
-          onPress={() =>
-            createComment.mutate(
-              {
-                body: commentBody,
-                spoiler: commentSpoiler,
-                parentId: replyParent?.id,
-              },
-              {
-                onSuccess: () => {
-                  setCommentBody("");
-                  setCommentSpoiler(false);
-                  setReplyParent(null);
-                },
-              },
-            )
-          }
-        >
-          Comment
-        </Button>
-      </View>
+      </Section>
       <Modal
         visible={editOpen}
         animationType="slide"
@@ -365,23 +390,9 @@ export default function LogDetailScreen() {
             </IconButton>
           }
         >
-          <TextInput
-            accessibilityLabel="Rating"
-            value={editRating}
-            onChangeText={setEditRating}
-            keyboardType="number-pad"
-            placeholder="Rating 1-10"
-            placeholderTextColor={theme.colors.faint}
-            style={{
-              minHeight: 48,
-              borderWidth: 1,
-              borderColor: theme.colors.border,
-              borderRadius: theme.radius.sm,
-              paddingHorizontal: theme.spacing.md,
-              color: theme.colors.text,
-              backgroundColor: theme.colors.surface,
-              fontSize: 16,
-            }}
+          <StarRatingInput
+            value={editRatingStars}
+            onChange={setEditRatingStars}
           />
           <TextInput
             accessibilityLabel="Review"
@@ -422,12 +433,7 @@ export default function LogDetailScreen() {
             onPress={() =>
               updateLog.mutate(
                 {
-                  rating: editRating.trim()
-                    ? Math.max(
-                        1,
-                        Math.min(10, Number.parseInt(editRating, 10) || 1),
-                      )
-                    : null,
+                  rating: starsToBackendRating(editRatingStars),
                   review: editBody.trim() || null,
                   spoiler: editSpoiler,
                 },
