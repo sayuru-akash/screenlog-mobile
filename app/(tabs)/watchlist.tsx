@@ -144,8 +144,12 @@ export default function WatchlistScreen() {
                     variant="secondary"
                     loading={movieLog.isPending}
                     onPress={() => confirmWatched(item)}
+                    style={{
+                      minWidth: 116,
+                      paddingHorizontal: theme.spacing.md,
+                    }}
                   >
-                    Watched
+                    Mark Watched
                   </Button>
                 ) : null}
                 <IconButton

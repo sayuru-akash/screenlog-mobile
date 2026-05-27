@@ -32,6 +32,18 @@ describe("getTitleMembershipAction", () => {
     });
   });
 
+  it("does not treat a watched movie status as added-to-watch membership", () => {
+    expect(
+      getTitleMembershipAction(
+        title({ type: "movie", status: "WATCHED", isWatched: true }),
+      ),
+    ).toMatchObject({
+      state: "add",
+      label: "Add to watchlist",
+      selected: false,
+    });
+  });
+
   it("shows remove action for saved unwatched movies and active shows", () => {
     expect(
       getTitleMembershipAction(
@@ -46,17 +58,6 @@ describe("getTitleMembershipAction", () => {
     ).toMatchObject({
       state: "remove",
       label: "Remove from watchlist",
-    });
-  });
-
-  it("uses watched-status copy for watched movies", () => {
-    expect(
-      getTitleMembershipAction(
-        title({ type: "movie", status: "WATCHED", isWatched: true }),
-      ),
-    ).toMatchObject({
-      state: "removeWatched",
-      label: "Remove watched status",
     });
   });
 });

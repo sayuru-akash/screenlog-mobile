@@ -55,6 +55,7 @@ export default function CalendarScreen() {
                 <Button
                   variant="secondary"
                   loading={progress.isPending}
+                  style={{ minWidth: 116, paddingHorizontal: theme.spacing.md }}
                   onPress={() =>
                     progress.mutate(
                       { action: "watch", episodeId: item.episodeId as string },
@@ -62,7 +63,7 @@ export default function CalendarScreen() {
                     )
                   }
                 >
-                  Watched
+                  Mark Watched
                 </Button>
               ) : null}
             </View>

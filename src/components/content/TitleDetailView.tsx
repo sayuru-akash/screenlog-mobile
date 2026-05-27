@@ -640,6 +640,10 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                             <Button
                               variant={episode.watched ? "ghost" : "secondary"}
                               loading={progress.isPending}
+                              style={{
+                                minWidth: episode.watched ? 80 : 116,
+                                paddingHorizontal: theme.spacing.md,
+                              }}
                               onPress={() => {
                                 if (episode.watched) {
                                   progress.mutate({
@@ -660,7 +664,7 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                                 });
                               }}
                             >
-                              {episode.watched ? "Undo" : "Mark"}
+                              {episode.watched ? "Undo" : "Mark Watched"}
                             </Button>
                             {episode.watched ? (
                               <IconButton
@@ -694,8 +698,12 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                       variant="secondary"
                       loading={progress.isPending}
                       onPress={confirmMarkCaughtUp}
+                      style={{
+                        minWidth: 132,
+                        paddingHorizontal: theme.spacing.md,
+                      }}
                     >
-                      Caught Up
+                      Mark Caught Up
                     </Button>
                     <Button
                       variant="danger"

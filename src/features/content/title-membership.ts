@@ -1,7 +1,7 @@
 import type { TitleSummary } from "@/types/domain";
 
 export type TitleMembershipAction = {
-  state: "add" | "remove" | "removeWatched";
+  state: "add" | "remove";
   label: string;
   selected: boolean;
 };
@@ -9,21 +9,16 @@ export type TitleMembershipAction = {
 export function getTitleMembershipAction(
   title: Pick<TitleSummary, "type" | "status" | "isWatched">,
 ): TitleMembershipAction {
-  const selected = Boolean(title.status);
+  const selected =
+    title.type === "movie"
+      ? title.status === "PLAN_TO_WATCH"
+      : Boolean(title.status);
 
   if (!selected) {
     return {
       state: "add",
       label: "Add to watchlist",
       selected: false,
-    };
-  }
-
-  if (title.type === "movie" && title.isWatched) {
-    return {
-      state: "removeWatched",
-      label: "Remove watched status",
-      selected: true,
     };
   }
 

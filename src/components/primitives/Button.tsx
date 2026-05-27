@@ -73,7 +73,11 @@ export function Button({
     >
       {loading ? <ActivityIndicator color={colors.color} /> : null}
       {!loading && icon ? <View>{icon}</View> : null}
-      <AppText variant="label" style={{ color: colors.color }}>
+      <AppText
+        variant="label"
+        numberOfLines={1}
+        style={{ color: colors.color, flexShrink: 1 }}
+      >
         {children}
       </AppText>
     </Pressable>

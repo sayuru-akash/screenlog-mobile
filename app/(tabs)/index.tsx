@@ -321,13 +321,14 @@ function UpNextHero({
             <Button
               loading={loading}
               disabled={!canMarkWatched}
+              style={{ minWidth: 124, paddingHorizontal: theme.spacing.md }}
               onPress={(event) => {
                 event.stopPropagation();
                 onMarkWatched();
               }}
               icon={<Check size={16} color="#FFFFFF" />}
             >
-              Watched
+              Mark Watched
             </Button>
           </View>
         </View>
@@ -557,6 +558,7 @@ function ContinueWatchingSection({
                   disabled={!item.nextEpisodeId}
                   onPress={() => onMarkWatched(item)}
                   icon={<Check size={16} color="#FFFFFF" />}
+                  style={{ alignSelf: "flex-start", minWidth: 124 }}
                 >
                   Mark Watched
                 </Button>
