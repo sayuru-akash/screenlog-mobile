@@ -4,7 +4,7 @@ import { profileMenuItems } from "./profile-menu";
 describe("profile menu", () => {
   it("builds modern profile menu entries with public view only when possible", () => {
     expect(profileMenuItems("sayuru").map((item) => item.label)).toEqual([
-      "Public view",
+      "Preview public view",
       "User settings",
       "Notification settings",
       "App settings",

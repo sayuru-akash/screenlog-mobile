@@ -22,7 +22,7 @@ export function profileMenuItems(username?: string | null): ProfileMenuItem[] {
       ? [
           {
             key: "public-view" as const,
-            label: "Public view",
+            label: "Preview public view",
             route: `/user/${username}`,
           },
         ]

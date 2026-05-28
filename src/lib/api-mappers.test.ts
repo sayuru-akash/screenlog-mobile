@@ -646,6 +646,24 @@ describe("mapProfilePayload", () => {
       },
     });
   });
+
+  it("keeps the self-profile public preview route available when username is not nested under user", () => {
+    expect(
+      mapProfilePayload({
+        username: "sayuru",
+        profile: {
+          bio: "Films, shows, and late-night rewatches.",
+          profileVisibility: "PUBLIC",
+        },
+      }),
+    ).toMatchObject({
+      user: {
+        username: "sayuru",
+        bio: "Films, shows, and late-night rewatches.",
+        profileVisibility: "PUBLIC",
+      },
+    });
+  });
 });
 
 describe("mapSettingsPayload", () => {

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -61,7 +61,7 @@ export function SkeletonBlock({
   style?: ViewStyle;
 }) {
   const theme = useTheme();
-  const opacity = useRef(new Animated.Value(0.48)).current;
+  const [opacity] = useState(() => new Animated.Value(0.48));
 
   useEffect(() => {
     const animation = Animated.loop(

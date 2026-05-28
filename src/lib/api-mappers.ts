@@ -307,24 +307,31 @@ export function mapFeedPayload(payload: unknown): { items?: ActivityItem[] } {
 export function mapProfilePayload(payload: unknown): ProfilePayload {
   const raw = asRecord(payload);
   const user = asRecord(raw.user);
+  const profile = asRecord(raw.profile);
   const stats = normalizeStats(raw.stats);
   const followerCount = numberOrUndefined(
-    user.followerCount ?? stats.followerCount,
+    user.followerCount ?? profile.followerCount ?? stats.followerCount,
   );
   const followingCount = numberOrUndefined(
-    user.followingCount ?? stats.followingCount,
+    user.followingCount ?? profile.followingCount ?? stats.followingCount,
   );
 
   return {
     user: {
-      id: nullableString(user.id) ?? undefined,
-      name: nullableString(user.name),
-      username: nullableString(user.username),
-      bio: nullableString(user.bio),
-      avatarUrl: tmdbImageUrl(user.avatarUrl ?? user.image),
+      id: nullableString(user.id ?? profile.id ?? raw.userId) ?? undefined,
+      name: nullableString(user.name ?? profile.name ?? raw.name),
+      username: nullableString(
+        user.username ?? profile.username ?? raw.username,
+      ),
+      bio: nullableString(user.bio ?? profile.bio ?? raw.bio),
+      avatarUrl: tmdbImageUrl(
+        user.avatarUrl ?? user.image ?? profile.avatarUrl ?? profile.image,
+      ),
       followerCount,
       followingCount,
-      profileVisibility: normalizeVisibility(user.profileVisibility),
+      profileVisibility: normalizeVisibility(
+        user.profileVisibility ?? profile.profileVisibility,
+      ),
     },
     calendar: asArray(raw.calendar)
       .map(normalizeProfileCalendarDay)
