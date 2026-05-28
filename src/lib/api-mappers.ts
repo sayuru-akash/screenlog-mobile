@@ -347,12 +347,52 @@ export function mapProfilePayload(payload: unknown): ProfilePayload {
     logs: asArray(raw.logs)
       .map(normalizeLog)
       .filter(Boolean) as ProfilePayload["logs"],
-    pinned: asArray(raw.pinned ?? raw.pins)
+    pinned: profilePins(raw)
       .map(normalizeProfilePin)
       .filter(Boolean) as ProfilePayload["pinned"],
+    avatarCandidates: asArray(raw.avatarCandidates)
+      .map(normalizeAvatarCandidate)
+      .filter(Boolean) as ProfilePayload["avatarCandidates"],
     isFollowing: Boolean(raw.isFollowing ?? raw.following),
     following: Boolean(raw.following ?? raw.isFollowing),
     isSelf: Boolean(raw.isSelf),
+  };
+}
+
+function profilePins(raw: AnyRecord): unknown[] {
+  const featuredPin = raw.featuredPin ?? raw.featured ?? raw.primaryPin;
+  if (featuredPin) return [featuredPin];
+
+  const pinned = raw.pinned ?? raw.pins;
+  if (Array.isArray(pinned)) return asArray(pinned).slice(0, 1);
+  if (pinned) return [pinned];
+  return [];
+}
+
+function normalizeAvatarCandidate(
+  item: unknown,
+): NonNullable<ProfilePayload["avatarCandidates"]>[number] | null {
+  const raw = asRecord(item);
+  const id = nullableString(raw.id);
+  const gender =
+    raw.gender === "male" || raw.gender === "female" ? raw.gender : null;
+  const name = nullableString(raw.name);
+  const image = nullableString(raw.image);
+  const sourceType =
+    raw.sourceType === "show" || raw.sourceType === "movie"
+      ? raw.sourceType
+      : null;
+
+  if (!id || !gender || !name || !image || !sourceType) return null;
+
+  return {
+    id,
+    gender,
+    name,
+    character: nullableString(raw.character),
+    image,
+    sourceTitle: nullableString(raw.sourceTitle),
+    sourceType,
   };
 }
 

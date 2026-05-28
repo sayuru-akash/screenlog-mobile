@@ -48,13 +48,41 @@ export function ProfileHero({
   profile,
   action,
   showUsername = true,
+  onAvatarPress,
 }: {
   profile: ProfilePayload;
   action?: React.ReactNode;
   showUsername?: boolean;
+  onAvatarPress?: () => void;
 }) {
   const theme = useTheme();
   const user = profile.user;
+  const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
+  const avatarUrl =
+    user?.avatarUrl && failedAvatarUrl !== user.avatarUrl
+      ? user.avatarUrl
+      : null;
+  const avatarStyle = {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: theme.colors.accent,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    overflow: "hidden" as const,
+  };
+  const avatarContent = avatarUrl ? (
+    <Image
+      source={{ uri: avatarUrl }}
+      style={{ width: "100%", height: "100%" }}
+      contentFit="cover"
+      onError={() => setFailedAvatarUrl(avatarUrl)}
+    />
+  ) : (
+    <AppText variant="heading" style={{ color: "#FFFFFF" }}>
+      {initials(user?.name || user?.username)}
+    </AppText>
+  );
   return (
     <View
       style={{
@@ -73,29 +101,21 @@ export function ProfileHero({
           gap: theme.spacing.md,
         }}
       >
-        <View
-          style={{
-            width: 72,
-            height: 72,
-            borderRadius: 36,
-            backgroundColor: theme.colors.accent,
-            alignItems: "center",
-            justifyContent: "center",
-            overflow: "hidden",
-          }}
-        >
-          {user?.avatarUrl ? (
-            <Image
-              source={{ uri: user.avatarUrl }}
-              style={{ width: "100%", height: "100%" }}
-              contentFit="cover"
-            />
-          ) : (
-            <AppText variant="heading" style={{ color: "#FFFFFF" }}>
-              {initials(user?.name || user?.username)}
-            </AppText>
-          )}
-        </View>
+        {onAvatarPress ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Change profile avatar"
+            onPress={onAvatarPress}
+            style={({ pressed }) => ({
+              ...avatarStyle,
+              opacity: pressed ? 0.72 : 1,
+            })}
+          >
+            {avatarContent}
+          </Pressable>
+        ) : (
+          <View style={avatarStyle}>{avatarContent}</View>
+        )}
         <View style={{ flex: 1, gap: 4 }}>
           <AppText variant="heading" numberOfLines={1}>
             {user?.name || user?.username || "Watchlog"}

@@ -1,8 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiError } from "@/lib/api-client";
 import { mapProfilePayload, mapWatchlistPayload } from "@/lib/api-mappers";
 import { queryKeys } from "@/lib/query-keys";
 import { authedApiRequest } from "@/lib/use-api";
-import type { ProfilePayload, WatchlistPayload } from "@/types/domain";
+import { buildProfileAvatarPayload } from "./avatar";
+import type {
+  ProfileAvatarCandidate,
+  ProfilePayload,
+  WatchlistPayload,
+} from "@/types/domain";
 
 export function useProfileQuery() {
   return useQuery({
@@ -25,6 +31,36 @@ export function useProfileLibraryQuery() {
     queryKey: queryKeys.profileLibrary,
     queryFn: async (): Promise<WatchlistPayload> =>
       mapWatchlistPayload(await authedApiRequest("/watchlist")),
+  });
+}
+
+export function useSetProfileAvatarMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (candidate: ProfileAvatarCandidate) =>
+      authedApiRequest("/profile/avatar", {
+        method: "POST",
+        body: buildProfileAvatarPayload(candidate),
+      }),
+    onSuccess: async (_data, candidate) => {
+      queryClient.setQueryData<ProfilePayload>(queryKeys.profile, (current) =>
+        current
+          ? {
+              ...current,
+              user: {
+                ...current.user,
+                avatarUrl: candidate.image,
+              },
+            }
+          : current,
+      );
+      await queryClient.invalidateQueries({ queryKey: queryKeys.profile });
+    },
+    onError: async (error) => {
+      if (error instanceof ApiError && error.status === 400) {
+        await queryClient.invalidateQueries({ queryKey: queryKeys.profile });
+      }
+    },
   });
 }
 

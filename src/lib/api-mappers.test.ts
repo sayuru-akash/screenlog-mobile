@@ -584,15 +584,6 @@ describe("mapProfilePayload", () => {
       ],
       pinned: [
         { id: "show-1", type: "show", title: "Silo", href: "/show/show-1" },
-        { id: "movie-1", type: "movie", title: "Heat", href: "/movie/movie-1" },
-        {
-          id: "list-1",
-          type: "list",
-          title: "Comfort watches",
-          posterUrl: "https://image.tmdb.org/t/p/w500/aftersun.jpg",
-          href: "/list/list-1",
-        },
-        { id: "log-1", type: "log", title: "Silo", href: "/log/log-1" },
       ],
     });
   });
@@ -662,6 +653,92 @@ describe("mapProfilePayload", () => {
         bio: "Films, shows, and late-night rewatches.",
         profileVisibility: "PUBLIC",
       },
+    });
+  });
+
+  it("maps profile avatar candidates from the primary featured pin", () => {
+    expect(
+      mapProfilePayload({
+        user: {
+          id: "user-1",
+          username: "ada",
+          image: "https://image.tmdb.org/t/p/w185/avatar.jpg",
+        },
+        avatarCandidates: [
+          {
+            id: "cast-1",
+            gender: "female",
+            name: "Rebecca Ferguson",
+            character: "Juliette Nichols",
+            image: "https://image.tmdb.org/t/p/w185/rebecca.jpg",
+            sourceTitle: "Silo",
+            sourceType: "show",
+          },
+          {
+            id: "cast-2",
+            gender: "unknown",
+            name: "",
+            image: null,
+            sourceTitle: "Silo",
+            sourceType: "show",
+          },
+        ],
+      }),
+    ).toMatchObject({
+      user: {
+        avatarUrl: "https://image.tmdb.org/t/p/w185/avatar.jpg",
+      },
+      avatarCandidates: [
+        {
+          id: "cast-1",
+          gender: "female",
+          name: "Rebecca Ferguson",
+          character: "Juliette Nichols",
+          image: "https://image.tmdb.org/t/p/w185/rebecca.jpg",
+          sourceTitle: "Silo",
+          sourceType: "show",
+        },
+      ],
+    });
+  });
+
+  it("treats the backend featured pin as the single profile pin", () => {
+    expect(
+      mapProfilePayload({
+        featuredPin: {
+          type: "LIST",
+          listId: "list-1",
+          list: {
+            id: "list-1",
+            title: "Comfort watches",
+            items: [
+              {
+                movie: {
+                  id: "movie-1",
+                  title: "Heat",
+                  posterPath: "/heat.jpg",
+                },
+              },
+            ],
+          },
+        },
+        pins: [
+          {
+            type: "MOVIE",
+            movieId: "movie-2",
+            movie: { id: "movie-2", title: "Thief" },
+          },
+        ],
+      }),
+    ).toMatchObject({
+      pinned: [
+        {
+          id: "list-1",
+          type: "list",
+          title: "Comfort watches",
+          posterUrl: "https://image.tmdb.org/t/p/w500/heat.jpg",
+        },
+      ],
     });
   });
 });

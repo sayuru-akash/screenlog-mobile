@@ -29,20 +29,53 @@ import {
   ProfileTabs,
   type ProfileTab,
 } from "@/components/profile/ProfileSurface";
+import { AvatarCandidateSheet } from "@/components/profile/AvatarCandidateSheet";
 import {
   useProfileLibraryQuery,
   useProfileQuery,
+  useSetProfileAvatarMutation,
 } from "@/features/profile/queries";
 import { profileMenuItems } from "@/features/profile/profile-menu";
 import { signOut } from "@/features/auth/actions";
+import { ApiError } from "@/lib/api-client";
 import { useTheme } from "@/lib/theme";
+import type { ProfileAvatarCandidate } from "@/types/domain";
 
 export default function ProfileScreen() {
   const theme = useTheme();
   const profile = useProfileQuery();
   const library = useProfileLibraryQuery();
+  const avatarMutation = useSetProfileAvatarMutation();
   const [tab, setTab] = useState<ProfileTab>("overview");
+  const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
+  const [avatarError, setAvatarError] = useState("");
+  const [selectedAvatarId, setSelectedAvatarId] = useState<string | null>(null);
   const user = profile.data?.user;
+  const avatarCandidates = profile.data?.avatarCandidates ?? [];
+  const canChangeAvatar =
+    profile.data?.isSelf !== false && avatarCandidates.length > 0;
+
+  const selectAvatar = (candidate: ProfileAvatarCandidate) => {
+    setSelectedAvatarId(candidate.id);
+    setAvatarError("");
+    avatarMutation.mutate(candidate, {
+      onSuccess: () => {
+        setAvatarSheetOpen(false);
+        setSelectedAvatarId(null);
+      },
+      onError: (error) => {
+        setSelectedAvatarId(null);
+        setAvatarError(
+          error instanceof ApiError
+            ? error.userMessage
+            : "Could not update avatar. Try again.",
+        );
+        if (error instanceof ApiError && error.status === 400) {
+          void profile.refetch();
+        }
+      },
+    });
+  };
 
   return (
     <Screen
@@ -69,6 +102,9 @@ export default function ProfileScreen() {
           <ProfileHero
             profile={profile.data}
             showUsername={false}
+            onAvatarPress={
+              canChangeAvatar ? () => setAvatarSheetOpen(true) : undefined
+            }
             action={
               <View
                 style={{
@@ -88,6 +124,22 @@ export default function ProfileScreen() {
               </View>
             }
           />
+          {avatarError ? (
+            <View
+              style={{
+                borderRadius: theme.radius.sm,
+                backgroundColor:
+                  theme.mode === "dark"
+                    ? "rgba(255,180,171,0.12)"
+                    : "rgba(180,35,24,0.08)",
+                padding: theme.spacing.md,
+              }}
+            >
+              <AppText style={{ color: theme.colors.danger }}>
+                {avatarError}
+              </AppText>
+            </View>
+          ) : null}
           <ProfileStats profile={profile.data} />
           <ProfileTabs value={tab} onChange={setTab} />
           {tab === "overview" ? (
@@ -120,6 +172,15 @@ export default function ProfileScreen() {
           ) : null}
         </View>
       ) : null}
+      <AvatarCandidateSheet
+        visible={avatarSheetOpen}
+        candidates={avatarCandidates}
+        selectedId={selectedAvatarId}
+        onClose={() => {
+          if (!avatarMutation.isPending) setAvatarSheetOpen(false);
+        }}
+        onSelect={selectAvatar}
+      />
     </Screen>
   );
 }

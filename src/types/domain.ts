@@ -70,6 +70,16 @@ export type ProfilePin = {
     | `/log/${string}`;
 };
 
+export type ProfileAvatarCandidate = {
+  id: string;
+  gender: "male" | "female";
+  name: string;
+  character?: string | null;
+  image: string;
+  sourceTitle?: string | null;
+  sourceType: MediaType;
+};
+
 export type ActivityItem = {
   id: string;
   text: string;
@@ -154,6 +164,7 @@ export type ProfilePayload = {
   reviews?: ReviewSummary[];
   logs?: ReviewSummary[];
   pinned?: ProfilePin[];
+  avatarCandidates?: ProfileAvatarCandidate[];
   isFollowing?: boolean;
   following?: boolean;
   isSelf?: boolean;
