@@ -1,5 +1,12 @@
 import type { PropsWithChildren } from "react";
-import { RefreshControl, ScrollView, View, type ViewStyle } from "react-native";
+import {
+  RefreshControl,
+  ScrollView,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type ViewStyle,
+} from "react-native";
 import { router } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -16,6 +23,7 @@ type ScreenProps = PropsWithChildren<{
   contentStyle?: ViewStyle;
   refreshing?: boolean;
   onRefresh?: () => void;
+  onScrollNearEnd?: () => void;
 }>;
 
 export function Screen({
@@ -28,8 +36,16 @@ export function Screen({
   contentStyle,
   refreshing = false,
   onRefresh,
+  onScrollNearEnd,
 }: ScreenProps) {
   const theme = useTheme();
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (!onScrollNearEnd) return;
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const distanceFromEnd =
+      contentSize.height - layoutMeasurement.height - contentOffset.y;
+    if (distanceFromEnd < 320) onScrollNearEnd();
+  };
   const content = (
     <View
       style={[
@@ -76,6 +92,8 @@ export function Screen({
           contentInsetAdjustmentBehavior="automatic"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          onScroll={onScrollNearEnd ? handleScroll : undefined}
+          scrollEventThrottle={onScrollNearEnd ? 120 : undefined}
           refreshControl={
             onRefresh ? (
               <RefreshControl

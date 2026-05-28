@@ -1,11 +1,23 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ApiError } from "@/lib/api-client";
-import { mapProfilePayload, mapWatchlistPayload } from "@/lib/api-mappers";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import {
+  mapLogsPagePayload,
+  mapProfilePayload,
+  mapWatchlistPayload,
+} from "@/lib/api-mappers";
 import { queryKeys } from "@/lib/query-keys";
 import { authedApiRequest } from "@/lib/use-api";
-import { buildProfileAvatarPayload } from "./avatar";
+import {
+  buildProfileAvatarPayload,
+  shouldRefetchAvatarCandidates,
+} from "./avatar";
 import type {
   ProfileAvatarCandidate,
+  ProfileLogPage,
   ProfilePayload,
   WatchlistPayload,
 } from "@/types/domain";
@@ -34,6 +46,25 @@ export function useProfileLibraryQuery() {
   });
 }
 
+export function useProfileHistoryQuery(username?: string, enabled = true) {
+  return useInfiniteQuery({
+    queryKey: queryKeys.profileHistory(username),
+    enabled,
+    initialPageParam: null as string | null,
+    queryFn: async ({ pageParam }): Promise<ProfileLogPage> =>
+      mapLogsPagePayload(
+        await authedApiRequest("/logs", {
+          query: {
+            limit: 24,
+            cursor: pageParam,
+            username: username || undefined,
+          },
+        }),
+      ),
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+  });
+}
+
 export function useSetProfileAvatarMutation() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -57,7 +88,7 @@ export function useSetProfileAvatarMutation() {
       await queryClient.invalidateQueries({ queryKey: queryKeys.profile });
     },
     onError: async (error) => {
-      if (error instanceof ApiError && error.status === 400) {
+      if (shouldRefetchAvatarCandidates(error)) {
         await queryClient.invalidateQueries({ queryKey: queryKeys.profile });
       }
     },

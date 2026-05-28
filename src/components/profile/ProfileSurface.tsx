@@ -49,11 +49,13 @@ export function ProfileHero({
   action,
   showUsername = true,
   onAvatarPress,
+  avatarDropdown,
 }: {
   profile: ProfilePayload;
   action?: React.ReactNode;
   showUsername?: boolean;
   onAvatarPress?: () => void;
+  avatarDropdown?: React.ReactNode;
 }) {
   const theme = useTheme();
   const user = profile.user;
@@ -92,6 +94,8 @@ export function ProfileHero({
         backgroundColor: theme.colors.surface,
         padding: theme.spacing.lg,
         gap: theme.spacing.lg,
+        position: "relative",
+        zIndex: avatarDropdown ? 10 : 1,
       }}
     >
       <View
@@ -101,21 +105,25 @@ export function ProfileHero({
           gap: theme.spacing.md,
         }}
       >
-        {onAvatarPress ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Change profile avatar"
-            onPress={onAvatarPress}
-            style={({ pressed }) => ({
-              ...avatarStyle,
-              opacity: pressed ? 0.72 : 1,
-            })}
-          >
-            {avatarContent}
-          </Pressable>
-        ) : (
-          <View style={avatarStyle}>{avatarContent}</View>
-        )}
+        <View style={{ alignItems: "flex-start", gap: theme.spacing.sm }}>
+          {onAvatarPress ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Change profile picture"
+              onPress={onAvatarPress}
+              style={({ pressed }) => ({
+                ...avatarStyle,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+                opacity: pressed ? 0.72 : 1,
+              })}
+            >
+              {avatarContent}
+            </Pressable>
+          ) : (
+            <View style={avatarStyle}>{avatarContent}</View>
+          )}
+        </View>
         <View style={{ flex: 1, gap: 4 }}>
           <AppText variant="heading" numberOfLines={1}>
             {user?.name || user?.username || "Watchlog"}
@@ -132,6 +140,20 @@ export function ProfileHero({
           ) : null}
         </View>
       </View>
+      {avatarDropdown ? (
+        <View
+          style={{
+            position: "absolute",
+            top: theme.spacing.lg + 72 + theme.spacing.sm,
+            left: theme.spacing.lg,
+            width: 304,
+            maxWidth: "92%",
+            zIndex: 20,
+          }}
+        >
+          {avatarDropdown}
+        </View>
+      ) : null}
       <View
         style={{
           flexDirection: "row",
@@ -726,6 +748,125 @@ export function ProfileLogList({
           </View>
         );
       })}
+    </View>
+  );
+}
+
+export function ProfilePaginatedLogList({
+  logs,
+  empty,
+  loading,
+  loadingMore,
+  hasMore,
+  error,
+  onRetry,
+  onLoadMore,
+}: {
+  logs?: ReviewSummary[];
+  empty: string;
+  loading?: boolean;
+  loadingMore?: boolean;
+  hasMore?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
+  onLoadMore?: () => void;
+}) {
+  const theme = useTheme();
+  if (loading) return <ProfileLogSkeleton count={6} />;
+  if (error && !logs?.length) {
+    return (
+      <View
+        style={{
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+          borderRadius: theme.radius.md,
+          backgroundColor: theme.colors.surface,
+          padding: theme.spacing.lg,
+          gap: theme.spacing.md,
+        }}
+      >
+        <AppText variant="label">Could not load history</AppText>
+        <AppText muted>{error}</AppText>
+        {onRetry ? (
+          <Button variant="secondary" onPress={onRetry}>
+            Try again
+          </Button>
+        ) : null}
+      </View>
+    );
+  }
+  if (!logs?.length) return <EmptyState title={empty} />;
+
+  return (
+    <View style={{ gap: theme.spacing.md }}>
+      <ProfileLogList logs={logs} empty={empty} />
+      {loadingMore ? <ProfileLogSkeleton count={2} /> : null}
+      {hasMore ? (
+        <Button variant="secondary" loading={loadingMore} onPress={onLoadMore}>
+          Load more history
+        </Button>
+      ) : null}
+      {error ? (
+        <AppText style={{ color: theme.colors.danger }}>{error}</AppText>
+      ) : null}
+    </View>
+  );
+}
+
+function ProfileLogSkeleton({ count }: { count: number }) {
+  const theme = useTheme();
+  return (
+    <View style={{ gap: theme.spacing.sm }}>
+      {Array.from({ length: count }).map((_, index) => (
+        <View
+          key={index}
+          style={{
+            minHeight: 98,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            borderRadius: theme.radius.md,
+            backgroundColor: theme.colors.surface,
+            padding: theme.spacing.md,
+            flexDirection: "row",
+            gap: theme.spacing.md,
+          }}
+        >
+          <View
+            style={{
+              width: 44,
+              height: 64,
+              borderRadius: theme.radius.sm,
+              backgroundColor: theme.colors.surfaceMuted,
+            }}
+          />
+          <View style={{ flex: 1, gap: theme.spacing.sm }}>
+            <View
+              style={{
+                width: "72%",
+                height: 14,
+                borderRadius: 999,
+                backgroundColor: theme.colors.surfaceMuted,
+              }}
+            />
+            <View
+              style={{
+                width: "48%",
+                height: 12,
+                borderRadius: 999,
+                backgroundColor: theme.colors.surfaceMuted,
+              }}
+            />
+            <View
+              style={{
+                width: "86%",
+                height: 12,
+                borderRadius: 999,
+                backgroundColor: theme.colors.surfaceMuted,
+              }}
+            />
+          </View>
+        </View>
+      ))}
     </View>
   );
 }

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Image } from "expo-image";
-import { X } from "lucide-react-native";
-import { Modal, Pressable, View } from "react-native";
+import { ChevronRight } from "lucide-react-native";
+import { Animated, Pressable, View } from "react-native";
 import { AppText } from "@/components/primitives/Text";
+import { avatarCandidateCopy } from "@/features/profile/avatar";
 import { initials } from "@/lib/format";
 import { useTheme } from "@/lib/theme";
 import type { ProfileAvatarCandidate } from "@/types/domain";
@@ -11,92 +12,86 @@ export function AvatarCandidateSheet({
   visible,
   candidates,
   selectedId,
-  onClose,
   onSelect,
 }: {
   visible: boolean;
   candidates: ProfileAvatarCandidate[];
   selectedId: string | null;
-  onClose: () => void;
   onSelect: (candidate: ProfileAvatarCandidate) => void;
 }) {
   const theme = useTheme();
+  const [reveal] = useState(() => new Animated.Value(0));
+
+  useEffect(() => {
+    if (!visible) {
+      reveal.setValue(0);
+      return;
+    }
+    Animated.timing(reveal, {
+      toValue: 1,
+      duration: 170,
+      useNativeDriver: false,
+    }).start();
+  }, [reveal, visible]);
+
+  if (!visible) return null;
+
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
+    <Animated.View
+      accessibilityRole="menu"
+      style={{
+        opacity: reveal,
+        transform: [
+          {
+            translateY: reveal.interpolate({
+              inputRange: [0, 1],
+              outputRange: [-6, 0],
+            }),
+          },
+        ],
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        borderRadius: theme.radius.md,
+        backgroundColor: theme.colors.surface,
+        padding: theme.spacing.xs,
+        gap: theme.spacing.xs,
+        shadowColor: "#000000",
+        shadowOpacity: theme.mode === "dark" ? 0.34 : 0.12,
+        shadowRadius: 18,
+        shadowOffset: { width: 0, height: 10 },
+        elevation: 8,
+      }}
     >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Close avatar picker"
-        onPress={onClose}
+      <View
         style={{
-          flex: 1,
-          justifyContent: "flex-end",
-          backgroundColor:
-            theme.mode === "dark" ? "rgba(0,0,0,0.52)" : "rgba(0,0,0,0.2)",
+          position: "absolute",
+          top: -7,
+          left: 30,
+          width: 14,
+          height: 14,
+          borderLeftWidth: 1,
+          borderTopWidth: 1,
+          borderColor: theme.colors.border,
+          backgroundColor: theme.colors.surface,
+          transform: [{ rotate: "45deg" }],
         }}
-      >
-        <Pressable
-          onPress={(event) => event.stopPropagation()}
-          style={{
-            maxHeight: "78%",
-            borderTopLeftRadius: theme.radius.lg,
-            borderTopRightRadius: theme.radius.lg,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            backgroundColor: theme.colors.surface,
-            padding: theme.spacing.lg,
-            gap: theme.spacing.lg,
-          }}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: theme.spacing.md,
-            }}
-          >
-            <View style={{ flex: 1, gap: 2 }}>
-              <AppText variant="heading">Choose avatar</AppText>
-              <AppText variant="caption" muted>
-                Cast portraits from your featured pin.
-              </AppText>
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Close avatar picker"
-              onPress={onClose}
-              style={({ pressed }) => ({
-                width: 38,
-                height: 38,
-                borderRadius: 19,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: theme.colors.surfaceMuted,
-                opacity: pressed ? 0.72 : 1,
-              })}
-            >
-              <X size={18} color={theme.colors.text} />
-            </Pressable>
-          </View>
-          <View style={{ gap: theme.spacing.sm }}>
-            {candidates.map((candidate) => (
-              <AvatarCandidateRow
-                key={candidate.id}
-                candidate={candidate}
-                loading={selectedId === candidate.id}
-                disabled={Boolean(selectedId)}
-                onPress={() => onSelect(candidate)}
-              />
-            ))}
-          </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
+      />
+      <View style={{ padding: theme.spacing.sm, gap: 2 }}>
+        <AppText variant="label">Choose profile picture</AppText>
+        <AppText variant="caption" muted numberOfLines={1}>
+          From your featured pin
+        </AppText>
+      </View>
+      {candidates.map((candidate) => (
+        <AvatarCandidateRow
+          key={candidate.id}
+          candidate={candidate}
+          loading={selectedId === candidate.id}
+          disabled={Boolean(selectedId)}
+          onPress={() => onSelect(candidate)}
+        />
+      ))}
+    </Animated.View>
   );
 }
 
@@ -114,6 +109,7 @@ function AvatarCandidateRow({
   const theme = useTheme();
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = candidate.image && !imageFailed;
+  const copy = avatarCandidateCopy(candidate);
   return (
     <Pressable
       accessibilityRole="button"
@@ -121,15 +117,15 @@ function AvatarCandidateRow({
       disabled={disabled && !loading}
       onPress={onPress}
       style={({ pressed }) => ({
-        minHeight: 72,
+        minHeight: 64,
         flexDirection: "row",
         alignItems: "center",
         gap: theme.spacing.md,
-        borderRadius: theme.radius.md,
-        borderWidth: 1,
-        borderColor: loading ? theme.colors.accent : theme.colors.border,
-        backgroundColor: theme.colors.surfaceMuted,
-        padding: theme.spacing.md,
+        borderRadius: theme.radius.sm,
+        backgroundColor:
+          pressed || loading ? theme.colors.surfaceMuted : "transparent",
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: theme.spacing.sm,
         opacity: disabled && !loading ? 0.48 : pressed ? 0.72 : 1,
       })}
     >
@@ -159,10 +155,10 @@ function AvatarCandidateRow({
       </View>
       <View style={{ flex: 1, gap: 3 }}>
         <AppText variant="label" numberOfLines={1}>
-          {candidate.name}
+          {copy.title}
         </AppText>
         <AppText variant="caption" muted numberOfLines={1}>
-          {candidate.character || candidate.sourceTitle || "Featured cast"}
+          {copy.subtitle}
         </AppText>
       </View>
       <View
@@ -181,9 +177,10 @@ function AvatarCandidateRow({
             textTransform: "capitalize",
           }}
         >
-          {loading ? "Saving" : candidate.gender}
+          {loading ? "Saving" : copy.label}
         </AppText>
       </View>
+      <ChevronRight size={16} color={theme.colors.faint} />
     </Pressable>
   );
 }

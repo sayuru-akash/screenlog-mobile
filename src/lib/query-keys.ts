@@ -34,6 +34,8 @@ export const queryKeys = {
   settings: ["settings"] as const,
   profile: ["profile"] as const,
   profileLibrary: ["profile-library"] as const,
+  profileHistory: (username?: string) =>
+    ["profile-history", username ?? "me"] as const,
   user: (username: string) => ["user", username] as const,
   feed: ["feed"] as const,
   lists: (username?: string) => ["lists", username ?? "me"] as const,

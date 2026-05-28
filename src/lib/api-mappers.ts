@@ -9,6 +9,7 @@ import type {
   ProfilePin,
   ProviderSummary,
   ProfileCalendarDay,
+  ProfileLogPage,
   ProfilePayload,
   ReviewSummary,
   SearchResult,
@@ -259,6 +260,16 @@ export function mapLogPayload(payload: unknown): ReviewSummary {
   return normalizeLog(raw.log ?? raw) ?? { id: "" };
 }
 
+export function mapLogsPagePayload(payload: unknown): ProfileLogPage {
+  const raw = asRecord(payload);
+  return {
+    logs: asArray(raw.logs)
+      .map(normalizeLog)
+      .filter(Boolean) as ReviewSummary[],
+    nextCursor: nullableString(raw.nextCursor),
+  };
+}
+
 export function mapCommentsPayload(payload: unknown): {
   comments?: ReviewSummary[];
 } {
@@ -350,12 +361,20 @@ export function mapProfilePayload(payload: unknown): ProfilePayload {
     pinned: profilePins(raw)
       .map(normalizeProfilePin)
       .filter(Boolean) as ProfilePayload["pinned"],
-    avatarCandidates: asArray(raw.avatarCandidates)
+    avatarCandidates: asArray(
+      raw.avatarCandidates ?? user.avatarCandidates ?? profile.avatarCandidates,
+    )
       .map(normalizeAvatarCandidate)
       .filter(Boolean) as ProfilePayload["avatarCandidates"],
-    isFollowing: Boolean(raw.isFollowing ?? raw.following),
-    following: Boolean(raw.following ?? raw.isFollowing),
-    isSelf: Boolean(raw.isSelf),
+    isFollowing:
+      raw.isFollowing === undefined && raw.following === undefined
+        ? undefined
+        : Boolean(raw.isFollowing ?? raw.following),
+    following:
+      raw.following === undefined && raw.isFollowing === undefined
+        ? undefined
+        : Boolean(raw.following ?? raw.isFollowing),
+    isSelf: raw.isSelf === undefined ? undefined : Boolean(raw.isSelf),
   };
 }
 
@@ -373,15 +392,20 @@ function normalizeAvatarCandidate(
   item: unknown,
 ): NonNullable<ProfilePayload["avatarCandidates"]>[number] | null {
   const raw = asRecord(item);
-  const id = nullableString(raw.id);
-  const gender =
-    raw.gender === "male" || raw.gender === "female" ? raw.gender : null;
-  const name = nullableString(raw.name);
-  const image = nullableString(raw.image);
+  const image = tmdbImageUrl(
+    raw.image ??
+      raw.imageUrl ??
+      raw.profileUrl ??
+      raw.profilePath ??
+      raw.profile_path,
+    "w500",
+  );
+  const id =
+    stringValue(raw.id ?? raw.castId ?? raw.personId ?? raw.tmdbId) || image;
+  const gender = normalizeCandidateGender(raw.gender);
+  const name = nullableString(raw.name ?? raw.character);
   const sourceType =
-    raw.sourceType === "show" || raw.sourceType === "movie"
-      ? raw.sourceType
-      : null;
+    mediaType(raw.sourceType ?? raw.source_type ?? raw.type) ?? "show";
 
   if (!id || !gender || !name || !image || !sourceType) return null;
 
@@ -391,9 +415,15 @@ function normalizeAvatarCandidate(
     name,
     character: nullableString(raw.character),
     image,
-    sourceTitle: nullableString(raw.sourceTitle),
+    sourceTitle: nullableString(raw.sourceTitle ?? raw.source_title),
     sourceType,
   };
+}
+
+function normalizeCandidateGender(value: unknown): "male" | "female" | null {
+  if (value === "male" || value === 2 || value === "2") return "male";
+  if (value === "female" || value === 1 || value === "1") return "female";
+  return null;
 }
 
 function normalizeProfileLibrary(raw: AnyRecord): WatchlistPayload | undefined {

@@ -55,12 +55,13 @@ Backend origin is configured with:
 
 ```sh
 EXPO_PUBLIC_APP_NAME=Watchlog
-EXPO_PUBLIC_API_ORIGIN=http://localhost:5173
+EXPO_PUBLIC_API_ORIGIN=https://watchlog.tv
 EXPO_PUBLIC_APP_SCHEME=watchlog
 ```
 
-Production must set `EXPO_PUBLIC_API_ORIGIN` to the deployed Cloudflare Worker
-origin. The backend must set `MOBILE_APP_SCHEME=watchlog` so Better Auth trusts
+Production uses the hosted Watchlog origin. Local development may override
+`EXPO_PUBLIC_API_ORIGIN` in an uncommitted env file when testing against a local
+backend. The backend must set `MOBILE_APP_SCHEME=watchlog` so Better Auth trusts
 the app deep link scheme.
 
 Production backend variables required by the web repo:

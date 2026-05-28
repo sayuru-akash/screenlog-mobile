@@ -6,6 +6,7 @@ import {
   mapHomePayload,
   mapListDetailPayload,
   mapLogPayload,
+  mapLogsPagePayload,
   mapProfilePayload,
   mapSettingsPayload,
   mapTitleDetailPayload,
@@ -702,6 +703,39 @@ describe("mapProfilePayload", () => {
     });
   });
 
+  it("keeps valid avatar candidates when the backend nests or serializes fields differently", () => {
+    expect(
+      mapProfilePayload({
+        user: {
+          avatarCandidates: [
+            {
+              castId: 42,
+              gender: 2,
+              name: "Oscar Isaac",
+              profile_path: "/oscar.jpg",
+              source_title: "Moon Knight",
+              source_type: "show",
+            },
+          ],
+        },
+      }).avatarCandidates,
+    ).toEqual([
+      {
+        id: "42",
+        gender: "male",
+        name: "Oscar Isaac",
+        character: null,
+        image: "https://image.tmdb.org/t/p/w500/oscar.jpg",
+        sourceTitle: "Moon Knight",
+        sourceType: "show",
+      },
+    ]);
+  });
+
+  it("does not force missing isSelf to false on the own-profile payload", () => {
+    expect(mapProfilePayload({ avatarCandidates: [] }).isSelf).toBeUndefined();
+  });
+
   it("treats the backend featured pin as the single profile pin", () => {
     expect(
       mapProfilePayload({
@@ -736,6 +770,40 @@ describe("mapProfilePayload", () => {
           id: "list-1",
           type: "list",
           title: "Comfort watches",
+          posterUrl: "https://image.tmdb.org/t/p/w500/heat.jpg",
+        },
+      ],
+    });
+  });
+});
+
+describe("mapLogsPagePayload", () => {
+  it("normalizes cursor-paginated watch history", () => {
+    expect(
+      mapLogsPagePayload({
+        nextCursor: "log-2",
+        logs: [
+          {
+            id: "log-1",
+            watchedAt: "2026-05-20T00:00:00.000Z",
+            rating: 8,
+            rewatch: true,
+            movie: {
+              id: "movie-1",
+              title: "Heat",
+              posterPath: "/heat.jpg",
+            },
+          },
+        ],
+      }),
+    ).toMatchObject({
+      nextCursor: "log-2",
+      logs: [
+        {
+          id: "log-1",
+          title: "Heat",
+          rating: 8,
+          rewatch: true,
           posterUrl: "https://image.tmdb.org/t/p/w500/heat.jpg",
         },
       ],

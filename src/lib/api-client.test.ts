@@ -7,6 +7,10 @@ import {
 } from "./api-client";
 
 describe("getPublicConfig", () => {
+  it("defaults to the hosted Watchlog origin so release builds never fall back to localhost", () => {
+    expect(getPublicConfig({}).apiOrigin).toBe("https://watchlog.tv");
+  });
+
   it("normalizes the backend origin and app scheme", () => {
     const config = getPublicConfig({
       EXPO_PUBLIC_APP_NAME: "Watchlog",
@@ -36,7 +40,7 @@ describe("buildApiUrl", () => {
         type: "show",
         empty: null,
       }),
-    ).toBe("http://localhost:5173/api/v1/search?q=One+Piece&type=show");
+    ).toBe("https://watchlog.tv/api/v1/search?q=One+Piece&type=show");
   });
 
   it("never allows non-versioned app data paths", () => {
@@ -75,7 +79,7 @@ describe("apiRequest", () => {
       ok: true,
     });
     expect(fetcher).toHaveBeenCalledWith(
-      "http://localhost:5173/api/v1/health",
+      "https://watchlog.tv/api/v1/health",
       expect.objectContaining({ credentials: "omit" }),
     );
   });

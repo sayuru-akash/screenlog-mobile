@@ -19,7 +19,7 @@ export type ApiRequestOptions = {
   signal?: AbortSignal;
 };
 
-const DEFAULT_API_ORIGIN = "http://localhost:5173";
+const DEFAULT_API_ORIGIN = "https://watchlog.tv";
 const MOBILE_CLIENT = "watchlog-mobile";
 
 export class ApiError extends Error {

@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { View } from "react-native";
 import { Button } from "@/components/primitives/Button";
 import { Screen } from "@/components/primitives/Screen";
@@ -14,12 +14,14 @@ import {
   ProfileListGrid,
   ProfileLogList,
   ProfileOverview,
+  ProfilePaginatedLogList,
   ProfileStats,
   ProfileTabs,
   type ProfileTab,
 } from "@/components/profile/ProfileSurface";
 import {
   useFollowMutation,
+  useProfileHistoryQuery,
   useUserProfileQuery,
 } from "@/features/profile/queries";
 import { useTheme } from "@/lib/theme";
@@ -28,6 +30,7 @@ export default function UserProfileScreen() {
   const theme = useTheme();
   const { username } = useLocalSearchParams<{ username: string }>();
   const profile = useUserProfileQuery(username);
+  const history = useProfileHistoryQuery(username, Boolean(username));
   const [tab, setTab] = useState<ProfileTab>("overview");
   const isFollowing = Boolean(
     profile.data?.following ?? profile.data?.isFollowing,
@@ -39,14 +42,27 @@ export default function UserProfileScreen() {
     profile.error !== null &&
     "status" in profile.error &&
     profile.error.status === 403;
+  const historyLogs = useMemo(
+    () => history.data?.pages.flatMap((page) => page.logs) ?? [],
+    [history.data],
+  );
+  const loadMoreHistory = () => {
+    if (tab !== "history" || !history.hasNextPage || history.isFetchingNextPage)
+      return;
+    void history.fetchNextPage();
+  };
 
   return (
     <Screen
       back
       title={profile.data?.user?.name || username}
       subtitle={username ? `@${username}` : undefined}
-      refreshing={profile.isRefetching}
-      onRefresh={() => void profile.refetch()}
+      refreshing={profile.isRefetching || history.isRefetching}
+      onRefresh={() => {
+        void profile.refetch();
+        void history.refetch();
+      }}
+      onScrollNearEnd={tab === "history" ? loadMoreHistory : undefined}
     >
       {profile.isLoading ? <ProfileSkeleton /> : null}
       {isPrivateProfile ? (
@@ -87,9 +103,15 @@ export default function UserProfileScreen() {
             />
           ) : null}
           {tab === "history" ? (
-            <ProfileLogList
-              logs={profile.data.logs}
+            <ProfilePaginatedLogList
+              logs={historyLogs}
               empty="No visible watch history yet."
+              loading={history.isLoading}
+              loadingMore={history.isFetchingNextPage}
+              hasMore={history.hasNextPage}
+              error={history.isError ? history.error.message : null}
+              onRetry={() => void history.refetch()}
+              onLoadMore={loadMoreHistory}
             />
           ) : null}
           {tab === "reviews" ? (

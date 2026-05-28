@@ -170,6 +170,11 @@ export type ProfilePayload = {
   isSelf?: boolean;
 };
 
+export type ProfileLogPage = {
+  logs: ReviewSummary[];
+  nextCursor?: string | null;
+};
+
 export type ReviewSummary = {
   id: string;
   title?: string | null;

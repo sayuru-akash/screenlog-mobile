@@ -11,7 +11,7 @@ import {
   UserCog,
   Users,
 } from "lucide-react-native";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Alert, Modal, Pressable, View } from "react-native";
 import { Button } from "@/components/primitives/Button";
 import { Screen } from "@/components/primitives/Screen";
@@ -25,13 +25,19 @@ import {
   ProfileListGrid,
   ProfileLogList,
   ProfileOverview,
+  ProfilePaginatedLogList,
   ProfileStats,
   ProfileTabs,
   type ProfileTab,
 } from "@/components/profile/ProfileSurface";
 import { AvatarCandidateSheet } from "@/components/profile/AvatarCandidateSheet";
 import {
+  canChangeProfileAvatar,
+  shouldRefetchAvatarCandidates,
+} from "@/features/profile/avatar";
+import {
   useProfileLibraryQuery,
+  useProfileHistoryQuery,
   useProfileQuery,
   useSetProfileAvatarMutation,
 } from "@/features/profile/queries";
@@ -45,6 +51,7 @@ export default function ProfileScreen() {
   const theme = useTheme();
   const profile = useProfileQuery();
   const library = useProfileLibraryQuery();
+  const history = useProfileHistoryQuery();
   const avatarMutation = useSetProfileAvatarMutation();
   const [tab, setTab] = useState<ProfileTab>("overview");
   const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
@@ -52,8 +59,16 @@ export default function ProfileScreen() {
   const [selectedAvatarId, setSelectedAvatarId] = useState<string | null>(null);
   const user = profile.data?.user;
   const avatarCandidates = profile.data?.avatarCandidates ?? [];
-  const canChangeAvatar =
-    profile.data?.isSelf !== false && avatarCandidates.length > 0;
+  const canChangeAvatar = canChangeProfileAvatar(profile.data);
+  const historyLogs = useMemo(
+    () => history.data?.pages.flatMap((page) => page.logs) ?? [],
+    [history.data],
+  );
+  const loadMoreHistory = () => {
+    if (tab !== "history" || !history.hasNextPage || history.isFetchingNextPage)
+      return;
+    void history.fetchNextPage();
+  };
 
   const selectAvatar = (candidate: ProfileAvatarCandidate) => {
     setSelectedAvatarId(candidate.id);
@@ -70,7 +85,7 @@ export default function ProfileScreen() {
             ? error.userMessage
             : "Could not update avatar. Try again.",
         );
-        if (error instanceof ApiError && error.status === 400) {
+        if (shouldRefetchAvatarCandidates(error)) {
           void profile.refetch();
         }
       },
@@ -80,11 +95,15 @@ export default function ProfileScreen() {
   return (
     <Screen
       title="Profile"
-      refreshing={profile.isRefetching || library.isRefetching}
+      refreshing={
+        profile.isRefetching || library.isRefetching || history.isRefetching
+      }
       onRefresh={() => {
         void profile.refetch();
         void library.refetch();
+        void history.refetch();
       }}
+      onScrollNearEnd={tab === "history" ? loadMoreHistory : undefined}
       subtitle={
         user?.username ? `@${user.username}` : "Your Watchlog identity."
       }
@@ -103,7 +122,23 @@ export default function ProfileScreen() {
             profile={profile.data}
             showUsername={false}
             onAvatarPress={
-              canChangeAvatar ? () => setAvatarSheetOpen(true) : undefined
+              canChangeAvatar
+                ? () => {
+                    if (!avatarMutation.isPending) {
+                      setAvatarSheetOpen((value) => !value);
+                    }
+                  }
+                : undefined
+            }
+            avatarDropdown={
+              canChangeAvatar ? (
+                <AvatarCandidateSheet
+                  visible={avatarSheetOpen}
+                  candidates={avatarCandidates}
+                  selectedId={selectedAvatarId}
+                  onSelect={selectAvatar}
+                />
+              ) : null
             }
             action={
               <View
@@ -150,9 +185,15 @@ export default function ProfileScreen() {
             />
           ) : null}
           {tab === "history" ? (
-            <ProfileLogList
-              logs={profile.data.logs}
+            <ProfilePaginatedLogList
+              logs={historyLogs}
               empty="Your watch history will appear here."
+              loading={history.isLoading}
+              loadingMore={history.isFetchingNextPage}
+              hasMore={history.hasNextPage}
+              error={history.isError ? history.error.message : null}
+              onRetry={() => void history.refetch()}
+              onLoadMore={loadMoreHistory}
             />
           ) : null}
           {tab === "reviews" ? (
@@ -172,15 +213,6 @@ export default function ProfileScreen() {
           ) : null}
         </View>
       ) : null}
-      <AvatarCandidateSheet
-        visible={avatarSheetOpen}
-        candidates={avatarCandidates}
-        selectedId={selectedAvatarId}
-        onClose={() => {
-          if (!avatarMutation.isPending) setAvatarSheetOpen(false);
-        }}
-        onSelect={selectAvatar}
-      />
     </Screen>
   );
 }
