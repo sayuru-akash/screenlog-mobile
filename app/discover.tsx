@@ -3,7 +3,7 @@ import { Section } from "@/components/primitives/Section";
 import {
   EmptyState,
   ErrorState,
-  LoadingState,
+  DashboardSkeleton,
 } from "@/components/primitives/StateViews";
 import { TitleRail } from "@/components/content/TitleRail";
 import { useDiscoverQuery } from "@/features/discover/queries";
@@ -12,8 +12,14 @@ export default function DiscoverScreen() {
   const discover = useDiscoverQuery();
   const rows = discover.data?.rows ?? [];
   return (
-    <Screen back title="Discover" subtitle="Fresh rows from Watchlog.">
-      {discover.isLoading ? <LoadingState label="Loading discovery" /> : null}
+    <Screen
+      back
+      title="Discover"
+      subtitle="Fresh rows from Watchlog."
+      refreshing={discover.isRefetching}
+      onRefresh={() => void discover.refetch()}
+    >
+      {discover.isLoading ? <DashboardSkeleton /> : null}
       {discover.isError ? (
         <ErrorState
           message={discover.error.message}

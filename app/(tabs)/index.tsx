@@ -19,7 +19,8 @@ import {
   EmptyState,
   ErrorState,
   IconButton,
-  LoadingState,
+  DashboardSkeleton,
+  SkeletonBlock,
 } from "@/components/primitives/StateViews";
 import { ProviderChip } from "@/components/content/ProviderChip";
 import { TitleRail } from "@/components/content/TitleRail";
@@ -88,6 +89,11 @@ export default function HomeScreen() {
   return (
     <Screen
       title="Watchlog"
+      refreshing={home.isRefetching || upNextQuery.isRefetching}
+      onRefresh={() => {
+        void home.refetch();
+        void upNextQuery.refetch();
+      }}
       right={
         <IconButton
           label="Notifications"
@@ -98,7 +104,7 @@ export default function HomeScreen() {
       }
       contentStyle={{ gap: theme.spacing.xl }}
     >
-      {home.isLoading ? <LoadingState label="Loading your dashboard" /> : null}
+      {home.isLoading ? <DashboardSkeleton /> : null}
       {home.isError ? (
         <ErrorState
           message={home.error.message}
@@ -354,46 +360,37 @@ function UpNextSkeleton() {
           gap: theme.spacing.md,
         }}
       >
-        <View
+        <SkeletonBlock
+          height={270}
+          radius={theme.radius.md}
           style={{
             position: "absolute",
-            inset: 0,
-            backgroundColor: theme.colors.surfaceMuted,
+            top: 0,
+            right: 0,
+            bottom: 0,
+            left: 0,
           }}
         />
-        <View
-          style={{
-            width: 96,
-            height: 26,
-            borderRadius: 999,
-            backgroundColor: theme.colors.accentSoft,
-          }}
+        <SkeletonBlock
+          width={96}
+          height={26}
+          radius={999}
+          style={{ backgroundColor: theme.colors.accentSoft }}
         />
-        <View
-          style={{
-            width: "64%",
-            height: 34,
-            borderRadius: theme.radius.sm,
-            backgroundColor: theme.colors.surface,
-            opacity: theme.mode === "dark" ? 0.4 : 0.7,
-          }}
+        <SkeletonBlock
+          width="64%"
+          height={34}
+          style={{ backgroundColor: theme.colors.surface }}
         />
-        <View
-          style={{
-            width: "82%",
-            height: 18,
-            borderRadius: theme.radius.sm,
-            backgroundColor: theme.colors.surface,
-            opacity: theme.mode === "dark" ? 0.3 : 0.55,
-          }}
+        <SkeletonBlock
+          width="82%"
+          height={18}
+          style={{ backgroundColor: theme.colors.surface }}
         />
-        <View
-          style={{
-            height: 6,
-            borderRadius: 999,
-            backgroundColor: theme.colors.surface,
-            opacity: theme.mode === "dark" ? 0.35 : 0.65,
-          }}
+        <SkeletonBlock
+          height={6}
+          radius={999}
+          style={{ backgroundColor: theme.colors.surface }}
         />
       </View>
       {[0, 1, 2].map((item) => (
@@ -409,14 +406,7 @@ function UpNextSkeleton() {
             padding: theme.spacing.md,
           }}
         >
-          <View
-            style={{
-              width: 58,
-              height: 82,
-              borderRadius: theme.radius.sm,
-              backgroundColor: theme.colors.surfaceMuted,
-            }}
-          />
+          <SkeletonBlock width={58} height={82} radius={theme.radius.sm} />
           <View
             style={{
               flex: 1,
@@ -424,30 +414,9 @@ function UpNextSkeleton() {
               gap: theme.spacing.sm,
             }}
           >
-            <View
-              style={{
-                width: "42%",
-                height: 14,
-                borderRadius: theme.radius.sm,
-                backgroundColor: theme.colors.surfaceMuted,
-              }}
-            />
-            <View
-              style={{
-                width: "72%",
-                height: 18,
-                borderRadius: theme.radius.sm,
-                backgroundColor: theme.colors.surfaceMuted,
-              }}
-            />
-            <View
-              style={{
-                width: "86%",
-                height: 28,
-                borderRadius: 999,
-                backgroundColor: theme.colors.surfaceMuted,
-              }}
-            />
+            <SkeletonBlock width="42%" height={14} />
+            <SkeletonBlock width="72%" height={18} />
+            <SkeletonBlock width="86%" height={28} radius={999} />
           </View>
         </View>
       ))}

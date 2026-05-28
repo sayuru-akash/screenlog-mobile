@@ -7,7 +7,7 @@ import { IconButton } from "@/components/primitives/StateViews";
 import {
   EmptyState,
   ErrorState,
-  LoadingState,
+  ListSkeleton,
 } from "@/components/primitives/StateViews";
 import { TitleRow } from "@/components/content/TitleRow";
 import {
@@ -69,7 +69,12 @@ export default function WatchlistScreen() {
   };
 
   return (
-    <Screen title="Watchlist" subtitle="Your working library.">
+    <Screen
+      title="Watchlist"
+      subtitle="Your working library."
+      refreshing={watchlist.isRefetching}
+      onRefresh={() => void watchlist.refetch()}
+    >
       <View style={{ flexDirection: "row", gap: theme.spacing.sm }}>
         <Button
           variant={kind === "shows" ? "primary" : "ghost"}
@@ -84,7 +89,7 @@ export default function WatchlistScreen() {
           Movies
         </Button>
       </View>
-      {watchlist.isLoading ? <LoadingState label="Loading watchlist" /> : null}
+      {watchlist.isLoading ? <ListSkeleton rows={5} /> : null}
       {watchlist.isError ? (
         <ErrorState
           message={watchlist.error.message}

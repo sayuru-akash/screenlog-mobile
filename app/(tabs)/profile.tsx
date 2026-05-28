@@ -15,7 +15,10 @@ import { useState } from "react";
 import { Alert, Modal, Pressable, View } from "react-native";
 import { Button } from "@/components/primitives/Button";
 import { Screen } from "@/components/primitives/Screen";
-import { ErrorState, LoadingState } from "@/components/primitives/StateViews";
+import {
+  ErrorState,
+  ProfileSkeleton,
+} from "@/components/primitives/StateViews";
 import { AppText } from "@/components/primitives/Text";
 import {
   ProfileHero,
@@ -44,12 +47,17 @@ export default function ProfileScreen() {
   return (
     <Screen
       title="Profile"
+      refreshing={profile.isRefetching || library.isRefetching}
+      onRefresh={() => {
+        void profile.refetch();
+        void library.refetch();
+      }}
       subtitle={
         user?.username ? `@${user.username}` : "Your Watchlog identity."
       }
       right={<ProfileActionsMenu username={user?.username} />}
     >
-      {profile.isLoading ? <LoadingState label="Loading profile" /> : null}
+      {profile.isLoading ? <ProfileSkeleton /> : null}
       {profile.isError ? (
         <ErrorState
           message={profile.error.message}

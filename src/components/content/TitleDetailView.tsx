@@ -27,7 +27,8 @@ import {
   EmptyState,
   ErrorState,
   IconButton,
-  LoadingState,
+  DashboardSkeleton,
+  ListSkeleton,
 } from "@/components/primitives/StateViews";
 import { AppText } from "@/components/primitives/Text";
 import { ProviderChip } from "./ProviderChip";
@@ -142,7 +143,6 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
       removeWatchlistConfirmationCopy({
         title: data.title,
         type,
-        watched: type === "movie" && Boolean(data.isWatched),
       }),
       () => remove.mutate({ type, id }),
     );
@@ -250,8 +250,13 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
       back
       title={data?.title || (type === "show" ? "Show" : "Movie")}
       subtitle={data?.year ? String(data.year) : undefined}
+      refreshing={title.isRefetching || extras.isRefetching}
+      onRefresh={() => {
+        void title.refetch();
+        void extras.refetch();
+      }}
     >
-      {title.isLoading ? <LoadingState label="Loading title" /> : null}
+      {title.isLoading ? <DashboardSkeleton /> : null}
       {title.isError ? (
         <ErrorState
           message={title.error.message}
@@ -721,7 +726,7 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
           ) : null}
           <Section title="Trailers">
             {extras.isLoading ? (
-              <LoadingState label="Loading trailers" />
+              <ListSkeleton rows={3} poster={false} />
             ) : extras.data?.trailers?.length ? (
               <View style={{ gap: theme.spacing.sm }}>
                 {extras.data.trailers.slice(0, 3).map((trailer, index) => (
@@ -958,7 +963,7 @@ export function TitleDetailView({ type, id }: { type: MediaType; id: string }) {
                 </IconButton>
               }
             >
-              {lists.isLoading ? <LoadingState label="Loading lists" /> : null}
+              {lists.isLoading ? <ListSkeleton rows={4} /> : null}
               {lists.isError ? (
                 <ErrorState
                   message={lists.error.message}

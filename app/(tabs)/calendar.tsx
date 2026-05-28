@@ -5,7 +5,7 @@ import { Section } from "@/components/primitives/Section";
 import {
   EmptyState,
   ErrorState,
-  LoadingState,
+  ListSkeleton,
 } from "@/components/primitives/StateViews";
 import { AppText } from "@/components/primitives/Text";
 import { useProgressMutation } from "@/features/content/actions";
@@ -19,8 +19,13 @@ export default function CalendarScreen() {
   const progress = useProgressMutation();
   const items = calendar.data?.items ?? [];
   return (
-    <Screen title="Calendar" subtitle="Upcoming unwatched episodes.">
-      {calendar.isLoading ? <LoadingState label="Loading episodes" /> : null}
+    <Screen
+      title="Calendar"
+      subtitle="Upcoming unwatched episodes."
+      refreshing={calendar.isRefetching}
+      onRefresh={() => void calendar.refetch()}
+    >
+      {calendar.isLoading ? <ListSkeleton rows={5} poster={false} /> : null}
       {calendar.isError ? (
         <ErrorState
           message={calendar.error.message}

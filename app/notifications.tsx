@@ -5,7 +5,7 @@ import { Screen } from "@/components/primitives/Screen";
 import {
   EmptyState,
   ErrorState,
-  LoadingState,
+  ListSkeleton,
 } from "@/components/primitives/StateViews";
 import { AppText } from "@/components/primitives/Text";
 import {
@@ -26,9 +26,11 @@ export default function NotificationsScreen() {
       back
       title="Notifications"
       subtitle={`${notifications.data?.unreadCount ?? 0} unread`}
+      refreshing={notifications.isRefetching}
+      onRefresh={() => void notifications.refetch()}
     >
       {notifications.isLoading ? (
-        <LoadingState label="Loading notifications" />
+        <ListSkeleton rows={5} poster={false} />
       ) : null}
       {notifications.isError ? (
         <ErrorState

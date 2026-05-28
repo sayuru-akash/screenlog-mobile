@@ -3,7 +3,11 @@ import { useState } from "react";
 import { View } from "react-native";
 import { Button } from "@/components/primitives/Button";
 import { Screen } from "@/components/primitives/Screen";
-import { ErrorState, LoadingState } from "@/components/primitives/StateViews";
+import {
+  EmptyState,
+  ErrorState,
+  ProfileSkeleton,
+} from "@/components/primitives/StateViews";
 import { AppText } from "@/components/primitives/Text";
 import {
   ProfileHero,
@@ -29,15 +33,25 @@ export default function UserProfileScreen() {
     profile.data?.following ?? profile.data?.isFollowing,
   );
   const follow = useFollowMutation(username, isFollowing);
+  const isPrivateProfile =
+    profile.isError &&
+    typeof profile.error === "object" &&
+    profile.error !== null &&
+    "status" in profile.error &&
+    profile.error.status === 403;
 
   return (
     <Screen
       back
       title={profile.data?.user?.name || username}
       subtitle={username ? `@${username}` : undefined}
+      refreshing={profile.isRefetching}
+      onRefresh={() => void profile.refetch()}
     >
-      {profile.isLoading ? <LoadingState label="Loading profile" /> : null}
-      {profile.isError ? (
+      {profile.isLoading ? <ProfileSkeleton /> : null}
+      {isPrivateProfile ? (
+        <PrivateProfileState username={username} />
+      ) : profile.isError ? (
         <ErrorState
           message={profile.error.message}
           onRetry={() => void profile.refetch()}
@@ -67,7 +81,10 @@ export default function UserProfileScreen() {
           <ProfileStats profile={profile.data} />
           <ProfileTabs value={tab} onChange={setTab} />
           {tab === "overview" ? (
-            <ProfileOverview profile={profile.data} />
+            <ProfileOverview
+              profile={profile.data}
+              library={profile.data.library}
+            />
           ) : null}
           {tab === "history" ? (
             <ProfileLogList
@@ -87,5 +104,35 @@ export default function UserProfileScreen() {
         </View>
       ) : null}
     </Screen>
+  );
+}
+
+function PrivateProfileState({ username }: { username?: string }) {
+  const theme = useTheme();
+  return (
+    <View style={{ gap: theme.spacing.xl }}>
+      <View
+        style={{
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+          borderRadius: theme.radius.md,
+          backgroundColor: theme.colors.surface,
+          padding: theme.spacing.lg,
+          gap: theme.spacing.md,
+        }}
+      >
+        <AppText variant="heading">
+          {username ? `@${username}` : "Private profile"}
+        </AppText>
+        <AppText muted>
+          This profile is private. Public lists can still be opened from direct
+          list links, but profile activity is hidden by the owner.
+        </AppText>
+      </View>
+      <EmptyState
+        title="Private activity"
+        body="Follow counts and visible activity appear here when this profile is public or shared with you."
+      />
+    </View>
   );
 }

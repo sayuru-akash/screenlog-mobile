@@ -1,7 +1,7 @@
 import { Tabs } from "expo-router";
 import { Redirect } from "expo-router";
 import { CalendarDays, Home, Search, User, Library } from "lucide-react-native";
-import { LoadingState } from "@/components/primitives/StateViews";
+import { DashboardSkeleton } from "@/components/primitives/StateViews";
 import { Screen } from "@/components/primitives/Screen";
 import { authClient } from "@/lib/auth-client";
 import { useTheme } from "@/lib/theme";
@@ -13,7 +13,7 @@ export default function TabsLayout() {
   if (session.isPending) {
     return (
       <Screen scroll={false}>
-        <LoadingState label="Checking session" />
+        <DashboardSkeleton />
       </Screen>
     );
   }

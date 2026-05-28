@@ -7,7 +7,7 @@ import { Screen } from "@/components/primitives/Screen";
 import {
   EmptyState,
   ErrorState,
-  LoadingState,
+  ListSkeleton,
 } from "@/components/primitives/StateViews";
 import { TitleRow } from "@/components/content/TitleRow";
 import { AppText } from "@/components/primitives/Text";
@@ -34,6 +34,10 @@ export default function SearchScreen() {
     <Screen
       title="Search"
       subtitle="Find shows and movies."
+      refreshing={search.isRefetching}
+      onRefresh={() => {
+        if (q.trim().length >= 2) void search.refetch();
+      }}
       contentStyle={{ gap: theme.spacing.lg }}
     >
       <TextInput
@@ -71,7 +75,7 @@ export default function SearchScreen() {
       {q.trim().length < 2 ? (
         <EmptyState title="Type to search" body="Two or more characters." />
       ) : null}
-      {search.isLoading ? <LoadingState label="Searching" /> : null}
+      {search.isLoading ? <ListSkeleton rows={4} /> : null}
       {search.isError ? (
         <ErrorState
           message={search.error.message}

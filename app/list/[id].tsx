@@ -9,7 +9,7 @@ import {
   EmptyState,
   ErrorState,
   IconButton,
-  LoadingState,
+  ListSkeleton,
 } from "@/components/primitives/StateViews";
 import { TitleRow } from "@/components/content/TitleRow";
 import { AppText } from "@/components/primitives/Text";
@@ -117,8 +117,10 @@ export default function ListDetailScreen() {
           ) : null}
         </View>
       }
+      refreshing={list.isRefetching}
+      onRefresh={() => void list.refetch()}
     >
-      {list.isLoading ? <LoadingState label="Loading list" /> : null}
+      {list.isLoading ? <ListSkeleton rows={5} /> : null}
       {list.isError ? (
         <ErrorState
           message={list.error.message}
@@ -382,6 +384,10 @@ export default function ListDetailScreen() {
               </Button>
             ))}
           </View>
+          <AppText variant="caption" muted>
+            List privacy is controlled here and does not change your profile
+            visibility.
+          </AppText>
           <Button
             loading={updateList.isPending}
             disabled={!title.trim()}
@@ -436,7 +442,7 @@ export default function ListDetailScreen() {
             }}
           />
           {q.trim().length < 2 ? <EmptyState title="Type to search" /> : null}
-          {search.isLoading ? <LoadingState label="Searching" /> : null}
+          {search.isLoading ? <ListSkeleton rows={4} /> : null}
           {search.isError ? (
             <ErrorState
               message={search.error.message}

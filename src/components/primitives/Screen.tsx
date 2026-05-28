@@ -1,5 +1,5 @@
 import type { PropsWithChildren } from "react";
-import { ScrollView, View, type ViewStyle } from "react-native";
+import { RefreshControl, ScrollView, View, type ViewStyle } from "react-native";
 import { router } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,6 +14,8 @@ type ScreenProps = PropsWithChildren<{
   back?: boolean;
   right?: React.ReactNode;
   contentStyle?: ViewStyle;
+  refreshing?: boolean;
+  onRefresh?: () => void;
 }>;
 
 export function Screen({
@@ -24,6 +26,8 @@ export function Screen({
   right,
   children,
   contentStyle,
+  refreshing = false,
+  onRefresh,
 }: ScreenProps) {
   const theme = useTheme();
   const content = (
@@ -71,6 +75,18 @@ export function Screen({
         <ScrollView
           contentInsetAdjustmentBehavior="automatic"
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={
+            onRefresh ? (
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={theme.colors.accent}
+                colors={[theme.colors.accent]}
+                progressBackgroundColor={theme.colors.surface}
+              />
+            ) : undefined
+          }
         >
           {content}
         </ScrollView>

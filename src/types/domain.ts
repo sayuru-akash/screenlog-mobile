@@ -145,9 +145,11 @@ export type ProfilePayload = {
     avatarUrl?: string | null;
     followingCount?: number;
     followerCount?: number;
+    profileVisibility?: Visibility;
   };
   calendar?: ProfileCalendarDay[];
   stats?: Record<string, string | number | null>;
+  library?: WatchlistPayload;
   lists?: CustomListSummary[];
   reviews?: ReviewSummary[];
   logs?: ReviewSummary[];

@@ -5,7 +5,11 @@ import { Image } from "expo-image";
 import { Button } from "@/components/primitives/Button";
 import { Screen } from "@/components/primitives/Screen";
 import { Section } from "@/components/primitives/Section";
-import { ErrorState, LoadingState } from "@/components/primitives/StateViews";
+import {
+  ErrorState,
+  SettingsSkeleton,
+  ListSkeleton,
+} from "@/components/primitives/StateViews";
 import { AppText } from "@/components/primitives/Text";
 import { requestAccountDeletion } from "@/features/auth/actions";
 import {
@@ -16,6 +20,11 @@ import {
   useSaveSettingsMutation,
   useSettingsQuery,
 } from "@/features/settings/queries";
+import {
+  resolveSettingsSection,
+  settingsSectionCopy,
+  settingsSectionVisibility,
+} from "@/features/settings/sections";
 import { useTheme } from "@/lib/theme";
 import { tmdbImageUrl } from "@/lib/api-mappers";
 import { useThemePreferenceStore } from "@/lib/theme";
@@ -36,13 +45,14 @@ const visibilityOptions: Array<{ label: string; value: Visibility }> = [
 export default function SettingsScreen() {
   const theme = useTheme();
   const { section } = useLocalSearchParams<{ section?: string }>();
-  const focusedSection =
-    section === "profile" || section === "notifications" ? section : null;
-  const showUserSettings = !focusedSection || focusedSection === "profile";
-  const showNotificationSettings =
-    !focusedSection || focusedSection === "notifications";
-  const showAppSettings = !focusedSection;
-  const needsSettings = showUserSettings || showAppSettings;
+  const settingsSection = resolveSettingsSection(section);
+  const {
+    showUserSettings,
+    showNotificationSettings,
+    showAppSettings,
+    needsSettings,
+  } = settingsSectionVisibility(settingsSection);
+  const copy = settingsSectionCopy(settingsSection);
   const setThemePreference = useThemePreferenceStore(
     (state) => state.setPreference,
   );
@@ -86,6 +96,12 @@ export default function SettingsScreen() {
     streamingTypes: providers.data?.streamingTypes ?? ["FLATRATE", "FREE"],
     ...providerDraft,
   };
+  const settingsReady =
+    !needsSettings || (!settings.isLoading && !settings.isError);
+  const notificationsReady =
+    !showNotificationSettings ||
+    (!notificationSettings.isLoading && !notificationSettings.isError);
+  const providersReady = !providers.isLoading && !providers.isError;
 
   useEffect(() => {
     if (mergedDraft.theme) setThemePreference(mergedDraft.theme);
@@ -94,31 +110,36 @@ export default function SettingsScreen() {
   return (
     <Screen
       back
-      title={
-        focusedSection === "profile"
-          ? "User Settings"
-          : focusedSection === "notifications"
-            ? "Notification Settings"
-            : "Settings"
+      title={copy.title}
+      subtitle={copy.subtitle}
+      refreshing={
+        settings.isRefetching ||
+        notificationSettings.isRefetching ||
+        providers.isRefetching
       }
-      subtitle={
-        focusedSection === "profile"
-          ? "Profile and visibility."
-          : focusedSection === "notifications"
-            ? "Alerts and reminders."
-            : "Account, providers, visibility."
-      }
+      onRefresh={() => {
+        if (showNotificationSettings) void notificationSettings.refetch();
+        if (needsSettings) void settings.refetch();
+        if (showAppSettings) void providers.refetch();
+      }}
     >
-      {needsSettings && settings.isLoading ? (
-        <LoadingState label="Loading settings" />
-      ) : null}
+      {needsSettings && settings.isLoading ? <SettingsSkeleton /> : null}
       {needsSettings && settings.isError ? (
         <ErrorState
           message={settings.error.message}
           onRetry={() => void settings.refetch()}
         />
       ) : null}
-      {showUserSettings ? (
+      {showNotificationSettings && notificationSettings.isLoading ? (
+        <SettingsSkeleton />
+      ) : null}
+      {showNotificationSettings && notificationSettings.isError ? (
+        <ErrorState
+          message={notificationSettings.error.message}
+          onRetry={() => void notificationSettings.refetch()}
+        />
+      ) : null}
+      {showUserSettings && settingsReady ? (
         <Section title="Profile">
           <Input
             label="Username"
@@ -141,7 +162,7 @@ export default function SettingsScreen() {
           />
         </Section>
       ) : null}
-      {showAppSettings ? (
+      {showAppSettings && settingsReady ? (
         <>
           <Section title="Region">
             <Input
@@ -176,7 +197,7 @@ export default function SettingsScreen() {
           </Section>
         </>
       ) : null}
-      {showUserSettings ? (
+      {showUserSettings && settingsReady ? (
         <Section title="Defaults">
           <VisibilityPicker
             label="Logs"
@@ -194,7 +215,7 @@ export default function SettingsScreen() {
           />
         </Section>
       ) : null}
-      {showUserSettings || showAppSettings ? (
+      {(showUserSettings || showAppSettings) && settingsReady ? (
         <>
           {save.isError ? (
             <AppText style={{ color: theme.colors.danger }}>
@@ -209,7 +230,7 @@ export default function SettingsScreen() {
           </Button>
         </>
       ) : null}
-      {showNotificationSettings ? (
+      {showNotificationSettings && notificationsReady ? (
         <Section title="Notifications">
           {(
             [
@@ -266,69 +287,72 @@ export default function SettingsScreen() {
           </Button>
         </Section>
       ) : null}
-      {showAppSettings ? (
+      {showAppSettings && settingsReady ? (
         <Section title="Providers">
-          {providers.isLoading ? (
-            <LoadingState label="Loading services" />
-          ) : null}
+          {providers.isLoading ? <ListSkeleton rows={3} /> : null}
           {providers.isError ? (
             <ErrorState
               message={providers.error.message}
               onRetry={() => void providers.refetch()}
             />
           ) : null}
-          <AppText muted>
-            {providers.data?.providers?.length ?? 0} services for{" "}
-            {providers.data?.catalogRegion ?? mergedProviders.region}
-            {providers.data?.isFallbackCatalog ? " fallback catalog" : ""}.
-          </AppText>
-          <ProviderPicker
-            providerIds={mergedProviders.providerIds}
-            providers={providers.data?.providers ?? []}
-            onChange={(providerIds) =>
-              setProviderDraft((value) => ({ ...value, providerIds }))
-            }
-          />
-          <SegmentedOptions
-            valueSet={new Set(mergedProviders.streamingTypes)}
-            options={[
-              ["FLATRATE", "Included"],
-              ["FREE", "Free"],
-              ["ADS", "Ads"],
-              ["RENT", "Rent"],
-              ["BUY", "Buy"],
-            ]}
-            multi
-            onToggle={(streamingType) =>
-              setProviderDraft((value) => {
-                const current = new Set(
-                  value.streamingTypes ?? mergedProviders.streamingTypes,
-                );
-                if (current.has(streamingType)) current.delete(streamingType);
-                else current.add(streamingType);
-                return {
-                  ...value,
-                  streamingTypes: Array.from(current).length
-                    ? Array.from(current)
-                    : ["FLATRATE"],
-                };
-              })
-            }
-          />
-          {saveProviders.isError ? (
-            <AppText style={{ color: theme.colors.danger }}>
-              {saveProviders.error.message}
-            </AppText>
+          {providersReady ? (
+            <>
+              <AppText muted>
+                {providers.data?.providers?.length ?? 0} services for{" "}
+                {providers.data?.catalogRegion ?? mergedProviders.region}
+                {providers.data?.isFallbackCatalog ? " fallback catalog" : ""}.
+              </AppText>
+              <ProviderPicker
+                providerIds={mergedProviders.providerIds}
+                providers={providers.data?.providers ?? []}
+                onChange={(providerIds) =>
+                  setProviderDraft((value) => ({ ...value, providerIds }))
+                }
+              />
+              <SegmentedOptions
+                valueSet={new Set(mergedProviders.streamingTypes)}
+                options={[
+                  ["FLATRATE", "Included"],
+                  ["FREE", "Free"],
+                  ["ADS", "Ads"],
+                  ["RENT", "Rent"],
+                  ["BUY", "Buy"],
+                ]}
+                multi
+                onToggle={(streamingType) =>
+                  setProviderDraft((value) => {
+                    const current = new Set(
+                      value.streamingTypes ?? mergedProviders.streamingTypes,
+                    );
+                    if (current.has(streamingType))
+                      current.delete(streamingType);
+                    else current.add(streamingType);
+                    return {
+                      ...value,
+                      streamingTypes: Array.from(current).length
+                        ? Array.from(current)
+                        : ["FLATRATE"],
+                    };
+                  })
+                }
+              />
+              {saveProviders.isError ? (
+                <AppText style={{ color: theme.colors.danger }}>
+                  {saveProviders.error.message}
+                </AppText>
+              ) : null}
+              <Button
+                loading={saveProviders.isPending}
+                onPress={() => saveProviders.mutate(mergedProviders)}
+              >
+                Save Providers
+              </Button>
+            </>
           ) : null}
-          <Button
-            loading={saveProviders.isPending}
-            onPress={() => saveProviders.mutate(mergedProviders)}
-          >
-            Save Providers
-          </Button>
         </Section>
       ) : null}
-      {showAppSettings ? (
+      {showAppSettings && settingsReady ? (
         <Section title="Account">
           <AppText muted>Deletion requires email confirmation.</AppText>
           {deleteMessage ? (

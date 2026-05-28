@@ -5,6 +5,7 @@ import type {
   Visibility,
   WatchStatus,
 } from "@/types/domain";
+import { queryKeys } from "@/lib/query-keys";
 
 export type WatchlistUpdateInput = {
   type: MediaType;
@@ -42,6 +43,24 @@ export type ReviewDraft = {
 
 export function buildWatchlistUpdatePayload(input: WatchlistUpdateInput) {
   return compactObject(input);
+}
+
+export function watchlistRemovalInvalidationKeys({
+  type,
+  id,
+}: {
+  type: MediaType;
+  id: string;
+}) {
+  return [
+    ["watchlist"],
+    ["home"],
+    ["up-next"],
+    queryKeys.title(type, id),
+    ["title"],
+    queryKeys.profileLibrary,
+    queryKeys.profile,
+  ] as const;
 }
 
 export function buildProgressPayload(input: ProgressInput) {

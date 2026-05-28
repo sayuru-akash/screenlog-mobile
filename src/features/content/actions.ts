@@ -6,6 +6,7 @@ import {
   buildProgressPayload,
   buildReviewPayload,
   buildWatchlistUpdatePayload,
+  watchlistRemovalInvalidationKeys,
   type ProgressInput,
   type ReviewDraft,
   type WatchlistUpdateInput,
@@ -17,6 +18,7 @@ export {
   buildWatchlistUpdatePayload,
   normalizeRating,
   titleToWatchlistInput,
+  watchlistRemovalInvalidationKeys,
   type ProgressInput,
   type ReviewDraft,
   type WatchlistUpdateInput,
@@ -49,12 +51,12 @@ export function useWatchlistRemoveMutation() {
         method: "DELETE",
         body: { type, id },
       }),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["watchlist"] }),
-        queryClient.invalidateQueries({ queryKey: ["home"] }),
-        queryClient.invalidateQueries({ queryKey: ["up-next"] }),
-      ]);
+    onSuccess: async (_data, variables) => {
+      await Promise.all(
+        watchlistRemovalInvalidationKeys(variables).map((queryKey) =>
+          queryClient.invalidateQueries({ queryKey }),
+        ),
+      );
     },
   });
 }

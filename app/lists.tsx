@@ -10,36 +10,46 @@ import {
   EmptyState,
   ErrorState,
   IconButton,
-  LoadingState,
+  ListSkeleton,
 } from "@/components/primitives/StateViews";
 import { AppText } from "@/components/primitives/Text";
 import { useCreateListMutation, useListsQuery } from "@/features/lists/queries";
+import { useSettingsQuery } from "@/features/settings/queries";
 import { useTheme } from "@/lib/theme";
 import type { Visibility } from "@/types/domain";
 
 export default function ListsScreen() {
   const theme = useTheme();
   const lists = useListsQuery();
+  const settings = useSettingsQuery();
   const createList = useCreateListMutation();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
   const [ranked, setRanked] = useState(true);
-  const [visibility, setVisibility] = useState<Visibility>("PUBLIC");
+  const [visibility, setVisibility] = useState<Visibility>("PRIVATE");
   const items = lists.data?.lists ?? [];
+  const openCreateList = () => {
+    setVisibility(
+      settings.data?.preferences?.defaultListVisibility ?? "PRIVATE",
+    );
+    setOpen(true);
+  };
   return (
     <Screen
       back
       title="Lists"
       subtitle="Ranked collections and notes."
       right={
-        <Button variant="secondary" onPress={() => setOpen(true)}>
+        <Button variant="secondary" onPress={openCreateList}>
           New
         </Button>
       }
+      refreshing={lists.isRefetching}
+      onRefresh={() => void lists.refetch()}
     >
-      {lists.isLoading ? <LoadingState label="Loading lists" /> : null}
+      {lists.isLoading ? <ListSkeleton rows={4} /> : null}
       {lists.isError ? (
         <ErrorState
           message={lists.error.message}
@@ -103,6 +113,9 @@ export default function ListsScreen() {
               </Button>
             ))}
           </View>
+          <AppText variant="caption" muted>
+            List visibility is separate from profile visibility.
+          </AppText>
           {createList.isError ? (
             <AppText style={{ color: theme.colors.danger }}>
               {createList.error.message}

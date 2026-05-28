@@ -2,8 +2,8 @@ export type ProfileMenuItem =
   | {
       key:
         | "public-view"
-        | "notification-settings"
         | "user-settings"
+        | "notification-settings"
         | "app-settings";
       label: string;
       route: string;
@@ -28,14 +28,14 @@ export function profileMenuItems(username?: string | null): ProfileMenuItem[] {
         ]
       : []),
     {
-      key: "notification-settings",
-      label: "Notification settings",
-      route: "/settings?section=notifications",
-    },
-    {
       key: "user-settings",
       label: "User settings",
       route: "/settings?section=profile",
+    },
+    {
+      key: "notification-settings",
+      label: "Notification settings",
+      route: "/settings?section=notifications",
     },
     {
       key: "app-settings",

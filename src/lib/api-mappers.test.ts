@@ -596,6 +596,56 @@ describe("mapProfilePayload", () => {
       ],
     });
   });
+
+  it("maps public profile title sections into a profile library", () => {
+    expect(
+      mapProfilePayload({
+        user: { id: "user-1", username: "ada", profileVisibility: "PUBLIC" },
+        favoriteTitles: [
+          {
+            id: "user-movie-1",
+            mediaId: "movie-1",
+            type: "movie",
+            title: "Heat",
+            posterPath: "/heat.jpg",
+            status: "WATCHED",
+            isFavourite: true,
+          },
+        ],
+        completedShows: [
+          {
+            id: "user-show-1",
+            mediaId: "show-1",
+            type: "show",
+            title: "Dark",
+            status: "COMPLETED",
+          },
+        ],
+        watchedMovies: [
+          {
+            id: "user-movie-2",
+            mediaId: "movie-2",
+            type: "movie",
+            title: "Thief",
+            status: "WATCHED",
+          },
+        ],
+      }),
+    ).toMatchObject({
+      user: { username: "ada", profileVisibility: "PUBLIC" },
+      library: {
+        shows: [{ id: "show-1", status: "COMPLETED" }],
+        movies: [
+          {
+            id: "movie-1",
+            isFavourite: true,
+            posterUrl: "https://image.tmdb.org/t/p/w500/heat.jpg",
+          },
+          { id: "movie-2", status: "WATCHED" },
+        ],
+      },
+    });
+  });
 });
 
 describe("mapSettingsPayload", () => {

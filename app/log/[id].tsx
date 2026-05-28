@@ -10,7 +10,7 @@ import {
   EmptyState,
   ErrorState,
   IconButton,
-  LoadingState,
+  ListSkeleton,
 } from "@/components/primitives/StateViews";
 import { AppText } from "@/components/primitives/Text";
 import {
@@ -71,8 +71,13 @@ export default function LogDetailScreen() {
       back
       title={log.data?.title || "Review"}
       subtitle={formatStarsFromBackend(log.data?.rating) ?? undefined}
+      refreshing={log.isRefetching || comments.isRefetching}
+      onRefresh={() => {
+        void log.refetch();
+        void comments.refetch();
+      }}
     >
-      {log.isLoading ? <LoadingState label="Loading review" /> : null}
+      {log.isLoading ? <ListSkeleton rows={3} /> : null}
       {log.isError ? (
         <ErrorState
           message={log.error.message}
@@ -173,9 +178,7 @@ export default function LogDetailScreen() {
       ) : null}
       <Section title="Comments">
         <View style={{ gap: theme.spacing.md }}>
-          {comments.isLoading ? (
-            <LoadingState label="Loading comments" />
-          ) : null}
+          {comments.isLoading ? <ListSkeleton rows={3} poster={false} /> : null}
           {comments.data?.comments?.length ? (
             comments.data.comments.map((comment, commentIndex) => (
               <View

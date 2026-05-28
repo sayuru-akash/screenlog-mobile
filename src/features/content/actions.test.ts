@@ -4,6 +4,7 @@ import {
   buildReviewPayload,
   buildWatchlistUpdatePayload,
   normalizeRating,
+  watchlistRemovalInvalidationKeys,
 } from "./action-payloads";
 
 describe("buildWatchlistUpdatePayload", () => {
@@ -15,6 +16,17 @@ describe("buildWatchlistUpdatePayload", () => {
         isFavourite: true,
       }),
     ).toEqual({ type: "movie", id: "movie_1", isFavourite: true });
+  });
+});
+
+describe("watchlistRemovalInvalidationKeys", () => {
+  it("refreshes the active title after removing an added-to-watch item", () => {
+    expect(
+      watchlistRemovalInvalidationKeys({ type: "movie", id: "movie_1" }),
+    ).toContainEqual(["title", "movie", "movie_1"]);
+    expect(
+      watchlistRemovalInvalidationKeys({ type: "movie", id: "movie_1" }),
+    ).toContainEqual(["profile-library"]);
   });
 });
 

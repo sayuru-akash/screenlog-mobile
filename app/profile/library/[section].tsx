@@ -8,7 +8,7 @@ import { Screen } from "@/components/primitives/Screen";
 import {
   EmptyState,
   ErrorState,
-  LoadingState,
+  ListSkeleton,
 } from "@/components/primitives/StateViews";
 import { AppText } from "@/components/primitives/Text";
 import {
@@ -85,9 +85,7 @@ export default function ProfileLibrarySectionScreen() {
           body="Return to profile and choose a valid section."
         />
       ) : null}
-      {library.isLoading ? (
-        <LoadingState label="Loading profile library" />
-      ) : null}
+      {library.isLoading ? <ListSkeleton rows={6} /> : null}
       {library.isError ? (
         <ErrorState
           message={library.error.message}
@@ -102,6 +100,8 @@ export default function ProfileLibrarySectionScreen() {
           renderItem={({ item }) => <LibraryTitleCard item={item} />}
           onEndReached={loadMore}
           onEndReachedThreshold={0.55}
+          refreshing={library.isRefetching}
+          onRefresh={() => void library.refetch()}
           ListHeaderComponent={
             items.length ? (
               <View

@@ -6,7 +6,7 @@ import { Screen } from "@/components/primitives/Screen";
 import {
   EmptyState,
   ErrorState,
-  LoadingState,
+  ListSkeleton,
 } from "@/components/primitives/StateViews";
 import { AppText } from "@/components/primitives/Text";
 import { useFeedQuery } from "@/features/feed/queries";
@@ -22,8 +22,10 @@ export default function FeedScreen() {
       back
       title="Feed"
       subtitle="Visible activity from people you follow."
+      refreshing={feed.isRefetching}
+      onRefresh={() => void feed.refetch()}
     >
-      {feed.isLoading ? <LoadingState label="Loading feed" /> : null}
+      {feed.isLoading ? <ListSkeleton rows={5} poster={false} /> : null}
       {feed.isError ? (
         <ErrorState
           message={feed.error.message}

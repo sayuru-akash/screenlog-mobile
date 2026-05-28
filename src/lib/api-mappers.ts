@@ -324,11 +324,13 @@ export function mapProfilePayload(payload: unknown): ProfilePayload {
       avatarUrl: tmdbImageUrl(user.avatarUrl ?? user.image),
       followerCount,
       followingCount,
+      profileVisibility: normalizeVisibility(user.profileVisibility),
     },
     calendar: asArray(raw.calendar)
       .map(normalizeProfileCalendarDay)
       .filter(Boolean) as ProfileCalendarDay[],
     stats,
+    library: normalizeProfileLibrary(raw),
     lists: asArray(raw.lists)
       .map(normalizeListSummary)
       .filter(Boolean) as ProfilePayload["lists"],
@@ -345,6 +347,52 @@ export function mapProfilePayload(payload: unknown): ProfilePayload {
     following: Boolean(raw.following ?? raw.isFollowing),
     isSelf: Boolean(raw.isSelf),
   };
+}
+
+function normalizeProfileLibrary(raw: AnyRecord): WatchlistPayload | undefined {
+  const favoriteTitles = asArray(raw.favoriteTitles)
+    .map(normalizeProfileTitle)
+    .filter(Boolean) as TitleSummary[];
+  const completedShows = asArray(raw.completedShows)
+    .map(normalizeProfileTitle)
+    .filter(Boolean) as TitleSummary[];
+  const watchedMovies = asArray(raw.watchedMovies)
+    .map(normalizeProfileTitle)
+    .filter(Boolean) as TitleSummary[];
+
+  if (
+    !favoriteTitles.length &&
+    !completedShows.length &&
+    !watchedMovies.length
+  ) {
+    return undefined;
+  }
+
+  const shows = new Map<string, TitleSummary>();
+  const movies = new Map<string, TitleSummary>();
+  for (const item of [...favoriteTitles, ...completedShows, ...watchedMovies]) {
+    const target = item.type === "show" ? shows : movies;
+    target.set(item.id, { ...target.get(item.id), ...item });
+  }
+
+  return {
+    shows: Array.from(shows.values()),
+    movies: Array.from(movies.values()),
+  };
+}
+
+function normalizeProfileTitle(item: unknown): TitleSummary | null {
+  const raw = asRecord(item);
+  const type = mediaType(raw.type ?? raw.mediaType ?? raw.media_type);
+  if (!type) return null;
+  return normalizeTitleLike(
+    {
+      ...raw,
+      id: raw.mediaId ?? raw.media_id ?? raw.showId ?? raw.movieId ?? raw.id,
+    },
+    type,
+    raw,
+  );
 }
 
 export function mapSettingsPayload(payload: unknown): {
