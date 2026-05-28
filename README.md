@@ -144,12 +144,16 @@ export const authClient = createAuthClient({
     expoClient({
       scheme: process.env.EXPO_PUBLIC_APP_SCHEME ?? "watchlog",
       storagePrefix: "watchlog",
-      cookiePrefix: "watchlog",
+      cookiePrefix: ["watchlog", "screenlog", "better-auth"],
       storage: SecureStore,
     }),
   ],
 });
 ```
+
+The app keeps `watchlog` as the canonical SecureStore prefix and migrates legacy
+`screenlog` or `better-auth` cookie/session cache entries on launch so users do
+not get signed out after an app rename or auth-prefix migration.
 
 All app API calls should include:
 

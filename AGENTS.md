@@ -139,7 +139,8 @@ flowchart LR
 Data flow:
 
 1. Auth screens call Better Auth through `authClient`.
-2. The Better Auth Expo client stores session cookies in SecureStore.
+2. The Better Auth Expo client stores session cookies in SecureStore and
+   migrates legacy `screenlog_*` or `better-auth_*` keys into `watchlog_*`.
 3. App API calls read `authClient.getCookie()` and attach it as `Cookie`.
 4. App API calls use `/api/v1/*` and `x-watchlog-client: watchlog-mobile`.
 5. TanStack Query owns loading, caching, invalidation, and background refresh.

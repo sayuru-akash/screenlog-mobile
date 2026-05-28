@@ -113,6 +113,18 @@ export type SearchResult = TitleSummary & {
   availabilityLabel?: string | null;
 };
 
+export type UserSearchResult = {
+  id: string;
+  username: string;
+  name?: string | null;
+  image?: string | null;
+  bio?: string | null;
+  profileVisibility?: Visibility;
+  canViewProfile?: boolean;
+  following?: boolean;
+  followerCount?: number;
+};
+
 export type WatchlistPayload = {
   shows?: TitleSummary[];
   movies?: TitleSummary[];
@@ -168,6 +180,7 @@ export type ProfilePayload = {
   isFollowing?: boolean;
   following?: boolean;
   isSelf?: boolean;
+  canViewProfile?: boolean;
 };
 
 export type ProfileLogPage = {

@@ -23,6 +23,8 @@ export const queryKeys = {
     ["watchlist", stableParams(params)] as const,
   search: (params: Record<string, ApiQueryValue>) =>
     ["search", stableParams(params)] as const,
+  userSearch: (params: Record<string, ApiQueryValue>) =>
+    ["user-search", stableParams(params)] as const,
   discover: ["discover"] as const,
   calendar: (timezone: string) => ["calendar", timezone] as const,
   title: (type: "show" | "movie", id: string) => ["title", type, id] as const,

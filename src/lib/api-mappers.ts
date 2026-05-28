@@ -16,6 +16,7 @@ import type {
   SettingsPayload,
   ThemePreference,
   TitleSummary,
+  UserSearchResult,
   Visibility,
   WatchlistPayload,
 } from "@/types/domain";
@@ -42,6 +43,17 @@ export function mapSearchPayload(payload: unknown): {
     results: asArray(raw.results)
       .map((item) => normalizeSearchResult(item))
       .filter(Boolean) as SearchResult[],
+  };
+}
+
+export function mapUserSearchPayload(payload: unknown): {
+  results?: UserSearchResult[];
+} {
+  const raw = asRecord(payload);
+  return {
+    results: asArray(raw.results)
+      .map((item) => normalizeUserSearchResult(item))
+      .filter(Boolean) as UserSearchResult[],
   };
 }
 
@@ -375,6 +387,10 @@ export function mapProfilePayload(payload: unknown): ProfilePayload {
         ? undefined
         : Boolean(raw.following ?? raw.isFollowing),
     isSelf: raw.isSelf === undefined ? undefined : Boolean(raw.isSelf),
+    canViewProfile:
+      raw.canViewProfile === undefined
+        ? undefined
+        : Boolean(raw.canViewProfile),
   };
 }
 
@@ -527,6 +543,24 @@ function normalizeSearchResult(item: unknown): SearchResult | null {
     genres: asArray(source.genres).map(String),
     runtime: numberOrUndefined(source.runtime),
     availabilityLabel: availabilityLabel(source.availability),
+  };
+}
+
+function normalizeUserSearchResult(item: unknown): UserSearchResult | null {
+  const raw = asRecord(item);
+  const id = stringValue(raw.id);
+  const username = stringValue(raw.username);
+  if (!id || !username) return null;
+  return {
+    id,
+    username,
+    name: nullableString(raw.name),
+    image: tmdbImageUrl(raw.image),
+    bio: nullableString(raw.bio),
+    profileVisibility: normalizeVisibility(raw.profileVisibility),
+    canViewProfile: raw.canViewProfile === true,
+    following: raw.following === true,
+    followerCount: numberOrUndefined(raw.followerCount) ?? 0,
   };
 }
 

@@ -36,6 +36,7 @@ export default function UserProfileScreen() {
     profile.data?.following ?? profile.data?.isFollowing,
   );
   const follow = useFollowMutation(username, isFollowing);
+  const isHiddenProfile = profile.data?.canViewProfile === false;
   const isPrivateProfile =
     profile.isError &&
     typeof profile.error === "object" &&
@@ -95,14 +96,17 @@ export default function UserProfileScreen() {
             </AppText>
           ) : null}
           <ProfileStats profile={profile.data} />
-          <ProfileTabs value={tab} onChange={setTab} />
-          {tab === "overview" ? (
+          {isHiddenProfile ? <PrivateProfileState username={username} /> : null}
+          {!isHiddenProfile ? (
+            <ProfileTabs value={tab} onChange={setTab} />
+          ) : null}
+          {!isHiddenProfile && tab === "overview" ? (
             <ProfileOverview
               profile={profile.data}
               library={profile.data.library}
             />
           ) : null}
-          {tab === "history" ? (
+          {!isHiddenProfile && tab === "history" ? (
             <ProfilePaginatedLogList
               logs={historyLogs}
               empty="No visible watch history yet."
@@ -114,13 +118,13 @@ export default function UserProfileScreen() {
               onLoadMore={loadMoreHistory}
             />
           ) : null}
-          {tab === "reviews" ? (
+          {!isHiddenProfile && tab === "reviews" ? (
             <ProfileLogList
               logs={profile.data.reviews}
               empty="No visible reviews yet."
             />
           ) : null}
-          {tab === "lists" ? (
+          {!isHiddenProfile && tab === "lists" ? (
             <ProfileListGrid lists={profile.data.lists} />
           ) : null}
         </View>

@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { mapSearchPayload } from "@/lib/api-mappers";
+import { mapSearchPayload, mapUserSearchPayload } from "@/lib/api-mappers";
 import { queryKeys } from "@/lib/query-keys";
 import { authedApiRequest } from "@/lib/use-api";
-import type { MediaType, SearchResult } from "@/types/domain";
+import type { MediaType, SearchResult, UserSearchResult } from "@/types/domain";
 
 export function useSearchQuery(q: string, type: "all" | MediaType) {
   return useQuery({
@@ -12,6 +12,19 @@ export function useSearchQuery(q: string, type: "all" | MediaType) {
       mapSearchPayload(
         await authedApiRequest("/search", {
           query: { q: q.trim(), type: type === "all" ? undefined : type },
+        }),
+      ),
+  });
+}
+
+export function useUserSearchQuery(q: string) {
+  return useQuery({
+    queryKey: queryKeys.userSearch({ q }),
+    enabled: q.trim().length >= 2,
+    queryFn: async (): Promise<{ results?: UserSearchResult[] }> =>
+      mapUserSearchPayload(
+        await authedApiRequest("/users", {
+          query: { q: q.trim() },
         }),
       ),
   });

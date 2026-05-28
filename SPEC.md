@@ -132,12 +132,16 @@ export const authClient = createAuthClient({
     expoClient({
       scheme: process.env.EXPO_PUBLIC_APP_SCHEME ?? "watchlog",
       storagePrefix: "watchlog",
-      cookiePrefix: "watchlog",
+      cookiePrefix: ["watchlog", "screenlog", "better-auth"],
       storage: SecureStore,
     }),
   ],
 });
 ```
+
+The production app must migrate legacy SecureStore keys from `screenlog_cookie`,
+`screenlog_session_data`, `better-auth_cookie`, and `better-auth_session_data`
+into the canonical `watchlog_*` keys before creating the auth client.
 
 Authenticated app API requests must attach the Better Auth cookie:
 
@@ -217,6 +221,7 @@ App API endpoints:
 | `GET`    | `/api/v1/up-next?filter=all`                             | Ranked Up Next recommendation set                 |
 | `GET`    | `/api/v1/calendar?timezone=Asia/Colombo`                 | Upcoming unwatched episodes for tracked shows     |
 | `GET`    | `/api/v1/search?q=Inception`                             | TMDB search with availability enrichment          |
+| `GET`    | `/api/v1/users?q=sayuru`                                 | Authenticated people search for social discovery  |
 | `POST`   | `/api/v1/lookup`                                         | Ensure/cross-map TMDB title to local ID           |
 | `GET`    | `/api/v1/discover`                                       | Discovery rows                                    |
 | `GET`    | `/api/v1/shows/:id`                                      | Show detail, seasons, progress, reviews, extras   |
